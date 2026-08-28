@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum LifecycleStatus {
+  CONCEPT
+  PRODUCTION
+  IN_USE
+  END_OF_LIFE
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  projects  Project[]
+  assets    Asset[]
+
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets      Asset[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model Asset {
+  id           String          @id @default(uuid())
+  title        String
+  description  String?
+  imageUrl     String?
+  status       LifecycleStatus @default(CONCEPT)
+  
+  projectId    String
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  events                LifecycleEvent[]
+  rightsRecord          RightsRecord?
+  sustainabilityRecord SustainabilityRecord?
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("assets")
+}
+
+model LifecycleEvent {
+  id             String          @id @default(uuid())
+  assetId        String
+  asset          Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  previousStatus LifecycleStatus?
+  newStatus      LifecycleStatus
+  notes          String?
+  timestamp      DateTime        @default(now())
+
+  @@map("lifecycle_events")
+}
+
+model RightsRecord {
+  id             String    @id @default(uuid())
+  assetId        String    @unique
+  asset          Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  licenseType    String
+  ownerName      String
+  terms          String?
+  expirationDate DateTime?
+  isDocumented   Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("rights_records")
+}
+
+model SustainabilityRecord {
+  id                String   @id @default(uuid())
+  assetId           String   @unique
+  asset             Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  carbonFootprintKg Float    @default(0.0)
+  weightKg          Float    @default(0.0)
+  recyclablePercent Float    @default(0.0)
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("sustainability_records")
+}
