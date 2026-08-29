@@ -8,6 +8,7 @@ TRACE is a Next.js web application designed to track project asset lifecycles, r
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Database ORM**: [Prisma](https://www.prisma.io/)
 - **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL database, authentication session middleware)
+- **Object Storage**: [Supabase Storage](https://supabase.com/docs/guides/storage) (Private bucket for asset images with signed URL previews)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [lucide-react](https://lucide.dev/)
 - **State & Forms**: [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/) validation
 - **Visualization**: [Recharts](https://recharts.org/) (for dashboard analytics)
@@ -19,7 +20,8 @@ TRACE is a Next.js web application designed to track project asset lifecycles, r
 
 ```
 ├── prisma/
-│   └── schema.prisma        # Database models & relationships
+│   ├── schema.prisma        # Database models, enums & relationships
+│   └── migrations/          # Applied schema migrations
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/          # Authentication pages (login, signup)
@@ -29,23 +31,30 @@ TRACE is a Next.js web application designed to track project asset lifecycles, r
 │   │   │   └── projects/    # Project organization and metadata
 │   │   ├── globals.css      # Core styles
 │   │   └── layout.tsx       # Root layout
-│   ├── components/          # Shared UI components
-│   ├── lib/                 # Core utilities and client libraries (Prisma client, Supabase config)
+│   ├── components/          # Shared UI components (asset forms, uploader)
+│   ├── lib/                 # Core utilities (Prisma client, Supabase config, Server Actions)
 │   └── middleware.ts        # Next.js middleware handling Supabase auth sessions
 ```
 
 ---
 
-## 🛠️ Database Schema Summary
+## 🛠️ Database Schema & Object Storage Summary
 
+### Database Entities
 The database uses PostgreSQL via Prisma with the following core entities:
 
 - **User**: System user linked to Supabase Auth.
 - **Project**: Represents a group of assets owned by a user.
-- **Asset**: The central entity representing a tracked physical or digital item. Has a `LifecycleStatus` (`CONCEPT`, `PRODUCTION`, `IN_USE`, `END_OF_LIFE`).
-- **LifecycleEvent**: Tracks history of lifecycle status transitions for auditability.
-- **RightsRecord**: License and ownership information associated with an asset.
-- **SustainabilityRecord**: Carbon footprint (kg), weight (kg), and recyclability percentage.
+- **Asset**: The central entity representing a tracked physical or digital item. Has a `LifecycleStage` (`DESIGN`, `PRODUCTION`, `SHOOTING`, `FINAL_DESTINATION`).
+- **LifecycleEvent**: Tracks history of lifecycle stage transitions for auditability.
+- **RightsRecord**: License type (`ORIGINAL`, `STOCK_LICENSED`, `AI_GENERATED`, `PUBLIC_DOMAIN`, `UNKNOWN`), source, legal status, and AI tool logs associated with an asset.
+- **SustainabilityRecord**: Material type, weight, emission factors, dynamic CO₂eq calculations, circularity outcome (`PENDING`, `REUSED`, `DONATED`, `RECYCLED`, `DISCARDED`), and notes.
+
+### Supabase Storage Setup
+Images are stored in a private Supabase Storage bucket.
+- **Bucket Name**: `asset-images`
+- **Access Level**: Private (renders via client/server signed URLs valid for 1 hour).
+- **Directory Structure**: `{userId}/{projectId}/{assetId}/{unique-file-name}.webp`
 
 ---
 
@@ -74,9 +83,17 @@ Fill in the credentials from your Supabase project:
 - `DIRECT_URL`: Direct database connection URL (port 5432)
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase Project API URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase Anon Public Key
-- `SUPABASE_SERVICE_ROLE_KEY`: Service role secret key
 
-### 4. Database Setup & Migrations
+### 4. Supabase Storage Configuration
+1. Go to your Supabase Dashboard ➔ **Storage**.
+2. Create a new bucket named **`asset-images`** and check the **Private** option.
+3. Configure RLS Policies for the bucket to allow authenticated reads and writes under their own user folders:
+   ```sql
+   -- Allow users to upload, read, and delete their own files
+   (bucket_id = 'asset-images'::text) AND (auth.role() = 'authenticated'::text) AND ((select auth.uid()::text) = (storage.foldername(name))[1])
+   ```
+
+### 5. Database Setup & Migrations
 
 Deploy the database schema to your Supabase PostgreSQL instance:
 
@@ -90,7 +107,7 @@ Or run development migrations:
 npx prisma migrate dev
 ```
 
-### 5. Running the Application
+### 6. Running the Application
 
 Start the local development server:
 
