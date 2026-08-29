@@ -124,9 +124,19 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
           </form>
         ) : (
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="relative h-48 w-full md:w-56 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+            <div className="relative h-48 w-full md:w-56 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 group">
               {asset.imageUrl ? (
-                <Image src={asset.imageUrl} alt={asset.title} fill className="object-cover" />
+                <>
+                  <Image src={asset.imageUrl} alt={asset.title} fill className="object-cover" />
+                  <a
+                    href={asset.imageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-2 right-2 bg-slate-900/80 hover:bg-slate-950 text-white text-[10px] font-semibold px-2.5 py-1 rounded-md transition-colors opacity-0 group-hover:opacity-100 shadow"
+                  >
+                    Ver original ↗
+                  </a>
+                </>
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-slate-300 font-bold">
                   TRACE
