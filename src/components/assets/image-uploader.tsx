@@ -10,11 +10,12 @@ import Image from 'next/image';
 interface ImageUploaderProps {
   value?: string;
   onChange: (path: string) => void;
+  onImageSelected?: (base64: string, mimeType: string) => void;
   projectId: string;
   assetId: string;
 }
 
-export function ImageUploader({ value, onChange, projectId, assetId }: ImageUploaderProps) {
+export function ImageUploader({ value, onChange, onImageSelected, projectId, assetId }: ImageUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -100,6 +101,17 @@ export function ImageUploader({ value, onChange, projectId, assetId }: ImageUplo
 
       // Return the storage path, e.g. "userId/projectId/assetId/filename"
       onChange(data.path);
+
+      if (onImageSelected) {
+        const reader = new FileReader();
+        reader.readAsDataURL(compressedFile);
+        reader.onloadend = () => {
+          const base64String = reader.result?.toString().split(',')[1];
+          if (base64String) {
+            onImageSelected(base64String, compressedFile.type);
+          }
+        };
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Error al procesar la imagen');

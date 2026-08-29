@@ -1,4 +1,4 @@
-import { getProjectById } from '@/lib/actions/project-actions';
+import { getProjectById, getProjectPdfData } from '@/lib/actions/project-actions';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, ArrowLeft, ArrowUpRight, FolderKanban } from 'lucide-react';
+import { ProjectPdfDownloadButton } from '@/components/pdf/project-pdf-download-button';
 
 const STAGE_VARIANTS: Record<string, 'info' | 'warning' | 'success' | 'secondary'> = {
   DESIGN: 'info',
@@ -21,6 +22,15 @@ const STAGE_LABELS: Record<string, string> = {
   FINAL_DESTINATION: 'Destino Final',
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  GENERIC: 'Genérico',
+  TYPOGRAPHY: 'Tipografía',
+  FURNITURE: 'Mobiliario',
+  PROPS: 'Utilería',
+  WARDROBE: 'Vestuario',
+  EQUIPMENT: 'Equipamiento',
+};
+
 interface ProjectDetailPageProps {
   params: { projectId: string };
 }
@@ -32,6 +42,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     notFound();
   }
 
+  const pdfProjectData = await getProjectPdfData(params.projectId);
+
   return (
     <div className="space-y-6">
       {/* Top navigation */}
@@ -42,11 +54,14 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         >
           <ArrowLeft className="h-4 w-4" /> Volver al Dashboard
         </Link>
-        <Link href={`/projects/${project.id}/assets/new`}>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 font-semibold gap-2 cursor-pointer">
-            <Plus className="h-4 w-4" /> Nuevo Asset
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <ProjectPdfDownloadButton project={pdfProjectData} />
+          <Link href={`/projects/${project.id}/assets/new`}>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 font-semibold gap-2 cursor-pointer">
+              <Plus className="h-4 w-4" /> Nuevo Asset
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Project Info Header */}
@@ -96,10 +111,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
                         TRACE
                       </div>
                     )}
-                    <div className="absolute top-3 right-3">
+                    <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
                       <Badge variant={STAGE_VARIANTS[asset.currentStage] || 'default'}>
                         {STAGE_LABELS[asset.currentStage] || asset.currentStage}
                       </Badge>
+                      {asset.category && asset.category !== 'GENERIC' && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[10px] px-2 py-0.5">
+                          {CATEGORY_LABELS[asset.category] || asset.category}
+                        </Badge>
+                      )}
                     </div>
                   </div>
 

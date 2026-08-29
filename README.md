@@ -78,11 +78,12 @@ Create a `.env` file in the root directory by copying the example:
 cp .env.example .env
 ```
 
-Fill in the credentials from your Supabase project:
+Fill in the credentials from your Supabase project and Gemini API:
 - `DATABASE_URL`: Connection pooler URL (port 6543)
 - `DIRECT_URL`: Direct database connection URL (port 5432)
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase Project API URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase Anon Public Key
+- `GEMINI_API_KEY`: API Key from Google AI Studio (uses `gemini-2.5-flash` model for asset description and category analysis)
 
 ### 4. Supabase Storage Configuration
 1. Go to your Supabase Dashboard ➔ **Storage**.

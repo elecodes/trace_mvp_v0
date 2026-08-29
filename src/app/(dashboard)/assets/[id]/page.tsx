@@ -43,19 +43,16 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
       {/* Asset Header Card (with Inline Editing) */}
       <AssetHeader asset={asset} stageLabels={STAGE_LABELS} />
 
-      {/* Lifecycle Transition Stepper */}
-      <LifecycleStepper assetId={asset.id} currentStage={asset.currentStage} />
+      {/* Lifecycle Transition Stepper & Simple History */}
+      <div className="space-y-6">
+        <LifecycleStepper assetId={asset.id} currentStage={asset.currentStage} />
+        <LifecycleHistory events={asset.events} />
+      </div>
 
-      {/* Grid: Forms & History */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <RightsRecordForm assetId={asset.id} initialData={asset.rightsRecord as any} />
-          <SustainabilityRecordForm assetId={asset.id} initialData={asset.sustainabilityRecord as any} />
-        </div>
-
-        <div className="space-y-6">
-          <LifecycleHistory events={asset.events} />
-        </div>
+      {/* Grid: Forms */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RightsRecordForm assetId={asset.id} initialData={asset.rightsRecord as any} />
+        <SustainabilityRecordForm assetId={asset.id} initialData={asset.sustainabilityRecord as any} />
       </div>
     </div>
   );

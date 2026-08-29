@@ -111,3 +111,42 @@ export async function updateProject(id: string, rawData: unknown) {
   revalidatePath(`/projects/${id}`);
   return updatedProject;
 }
+
+export async function getProjectPdfData(projectId: string) {
+  const userId = await getAuthUserId();
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      assets: {
+        include: {
+          events: {
+            orderBy: { timestamp: 'desc' },
+          },
+          rightsRecord: true,
+          sustainabilityRecord: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+  });
+
+  if (!project || project.userId !== userId) {
+    throw new Error('Proyecto no encontrado o no autorizado');
+  }
+
+  const signedAssets = await Promise.all(
+    project.assets.map(async (asset) => ({
+      ...asset,
+      rawImageUrl: asset.imageUrl,
+      imageUrl: await signAssetImageUrl(asset.imageUrl),
+    }))
+  );
+
+  return JSON.parse(
+    JSON.stringify({
+      ...project,
+      assets: signedAssets,
+    })
+  );
+}
+

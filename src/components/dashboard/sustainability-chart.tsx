@@ -17,7 +17,7 @@ interface SustainabilityChartProps {
     id: string;
     title: string;
     sustainabilityRecord?: {
-      carbonFootprintKg: number;
+      estimatedCo2eqKg: number | null;
     } | null;
   }[];
 }
@@ -26,7 +26,7 @@ export function SustainabilityChart({ assets }: SustainabilityChartProps) {
   const data = assets
     .map((asset) => ({
       name: asset.title.length > 12 ? `${asset.title.substring(0, 12)}...` : asset.title,
-      co2: asset.sustainabilityRecord?.carbonFootprintKg || 0,
+      co2: asset.sustainabilityRecord?.estimatedCo2eqKg || 0,
     }))
     .filter((d) => d.co2 > 0);
 

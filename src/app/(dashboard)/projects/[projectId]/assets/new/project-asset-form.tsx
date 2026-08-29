@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ImageUploader } from '@/components/assets/image-uploader';
 import { Loader2 } from 'lucide-react';
+import { AssetCategory } from '@prisma/client';
+import { analyzeAssetImage } from '@/lib/actions/ai-actions';
 
 interface ProjectAssetFormProps {
   projectId: string;
@@ -19,9 +21,27 @@ export function ProjectAssetForm({ projectId }: ProjectAssetFormProps) {
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [manualUrl, setManualUrl] = useState('');
+  const [category, setCategory] = useState<AssetCategory>('GENERIC');
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleImageSelected = async (base64: string, mimeType: string) => {
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const data = await analyzeAssetImage(base64, mimeType);
+      if (data) {
+        if (data.description) setDescription(data.description);
+        if (data.category) setCategory(data.category as AssetCategory);
+      }
+    } catch (err) {
+      console.error('Error al analizar la imagen:', err);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +63,7 @@ export function ProjectAssetForm({ projectId }: ProjectAssetFormProps) {
         description: description || undefined,
         imageUrl: finalImageUrl,
         projectId,
+        category,
       });
       router.push(`/assets/${asset.id}`);
       router.refresh();
@@ -54,6 +75,13 @@ export function ProjectAssetForm({ projectId }: ProjectAssetFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {analyzing && (
+        <div className="p-3 text-sm text-blue-700 bg-blue-50 rounded-md border border-blue-200 flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+          <span>Analizando imagen con Gemini IA para autocompletar campos...</span>
+        </div>
+      )}
+
       {error && (
         <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
           {error}
@@ -69,6 +97,23 @@ export function ProjectAssetForm({ projectId }: ProjectAssetFormProps) {
           onChange={(e) => setTitle(e.target.value)}
           required
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="category">Categoría del Asset *</Label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as AssetCategory)}
+          className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="GENERIC">Genérico / General</option>
+          <option value="TYPOGRAPHY">Tipografía</option>
+          <option value="FURNITURE">Mobiliario</option>
+          <option value="PROPS">Utilería / Props</option>
+          <option value="WARDROBE">Vestuario</option>
+          <option value="EQUIPMENT">Equipamiento / Maquinaria</option>
+        </select>
       </div>
 
       <div className="space-y-2">
@@ -94,6 +139,7 @@ export function ProjectAssetForm({ projectId }: ProjectAssetFormProps) {
           <ImageUploader
             value={imageUrl}
             onChange={(url) => setImageUrl(url)}
+            onImageSelected={handleImageSelected}
             projectId={projectId}
             assetId={assetId}
           />

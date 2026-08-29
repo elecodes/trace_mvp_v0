@@ -18,11 +18,21 @@ interface AssetHeaderProps {
     imageUrl: string | null;
     rawImageUrl?: string | null;
     currentStage: string;
+    category?: string;
     createdAt: Date | string;
     project: { id: string; name: string };
   };
   stageLabels: Record<string, string>;
 }
+
+const CATEGORY_LABELS: Record<string, string> = {
+  GENERIC: 'Genérico',
+  TYPOGRAPHY: 'Tipografía',
+  FURNITURE: 'Mobiliario',
+  PROPS: 'Utilería',
+  WARDROBE: 'Vestuario',
+  EQUIPMENT: 'Equipamiento',
+};
 
 export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -33,20 +43,12 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [copied, setCopied] = useState(false);
   const router = useRouter();
 
-  const getFullDisplayUrl = (rawPath: string | null | undefined): string => {
-    if (!rawPath) return '';
-    if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
-      return rawPath;
-    }
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    return `${supabaseUrl}/storage/v1/object/private/asset-images/${rawPath}`;
-  };
-
-  const displayUrl = getFullDisplayUrl(asset.rawImageUrl);
+  const isExternalUrl = asset.rawImageUrl?.startsWith('http://') || asset.rawImageUrl?.startsWith('https://');
+  const displayUrl = (isExternalUrl ? asset.rawImageUrl : 'Imagen almacenada en TRACE') || '';
 
   const handleCopy = () => {
-    if (!displayUrl) return;
-    navigator.clipboard.writeText(displayUrl);
+    if (!isExternalUrl || !asset.rawImageUrl) return;
+    navigator.clipboard.writeText(asset.rawImageUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -170,6 +172,11 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                   <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
                     {stageLabels[asset.currentStage] || asset.currentStage}
                   </span>
+                  {asset.category && asset.category !== 'GENERIC' && (
+                    <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+                      {CATEGORY_LABELS[asset.category] || asset.category}
+                    </span>
+                  )}
                   <span className="text-xs text-slate-400 flex items-center gap-1">
                     <FolderKanban className="h-3.5 w-3.5 text-slate-400" /> {asset.project.name}
                   </span>
@@ -195,21 +202,23 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                   <span className="text-slate-700 truncate select-all max-w-[200px] sm:max-w-[320px] font-mono text-[10px]" title={displayUrl}>
                     {displayUrl}
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="text-[10px] text-emerald-700 font-semibold hover:text-emerald-800 shrink-0 pl-1 cursor-pointer flex items-center gap-1"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="h-3 w-3 text-emerald-600" /> Copiado
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3 w-3" /> Copiar
-                      </>
-                    )}
-                  </button>
+                  {isExternalUrl && (
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className="text-[10px] text-emerald-700 font-semibold hover:text-emerald-800 shrink-0 pl-1 cursor-pointer flex items-center gap-1"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-3 w-3 text-emerald-600" /> Copiado
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" /> Copiar
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               )}
 

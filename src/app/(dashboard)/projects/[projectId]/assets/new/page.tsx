@@ -32,7 +32,7 @@ export default async function NewProjectAssetPage({ params }: NewProjectAssetPag
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Crear Nuevo Asset</h1>
             <p className="text-sm text-slate-500">
-              Registrá un nuevo activo para el proyecto <span className="font-semibold text-slate-700">"{project.name}"</span>.
+              Registrá un nuevo activo para el proyecto <span className="font-semibold text-slate-700">&ldquo;{project.name}&rdquo;</span>.
             </p>
           </div>
         </div>

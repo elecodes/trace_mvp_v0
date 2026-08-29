@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
-import { LifecycleStage } from '@prisma/client';
+import { LifecycleStage, AssetCategory } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 async function getAuthUser() {
@@ -122,6 +122,7 @@ export async function createAsset(data: {
   description?: string;
   imageUrl?: string;
   projectId: string;
+  category?: AssetCategory;
 }) {
   const user = await getAuthUser();
 
@@ -142,6 +143,7 @@ export async function createAsset(data: {
       imageUrl: data.imageUrl || null,
       projectId: data.projectId,
       currentStage: LifecycleStage.DESIGN,
+      category: data.category || AssetCategory.GENERIC,
       events: {
         create: {
           previousStage: null,

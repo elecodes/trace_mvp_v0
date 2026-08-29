@@ -13,6 +13,15 @@ const STATUS_VARIANTS: Record<string, 'info' | 'warning' | 'success' | 'secondar
   FINAL_DESTINATION: 'secondary',
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  GENERIC: 'Genérico',
+  TYPOGRAPHY: 'Tipografía',
+  FURNITURE: 'Mobiliario',
+  PROPS: 'Utilería',
+  WARDROBE: 'Vestuario',
+  EQUIPMENT: 'Equipamiento',
+};
+
 export default async function AssetsPage() {
   const assets = await getAssets();
 
@@ -59,10 +68,15 @@ export default async function AssetsPage() {
                       TRACE
                     </div>
                   )}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
                     <Badge variant={STATUS_VARIANTS[asset.currentStage] || 'default'}>
                       {asset.currentStage}
                     </Badge>
+                    {asset.category && asset.category !== 'GENERIC' && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[10px] px-2 py-0.5">
+                        {CATEGORY_LABELS[asset.category] || asset.category}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 

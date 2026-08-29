@@ -15,6 +15,15 @@ enum LifecycleStage {
   FINAL_DESTINATION
 }
 
+enum AssetCategory {
+  GENERIC
+  TYPOGRAPHY
+  FURNITURE
+  PROPS
+  WARDROBE
+  EQUIPMENT
+}
+
 enum LicenseType {
   ORIGINAL
   STOCK_LICENSED
@@ -68,6 +77,7 @@ model Asset {
   description  String?
   imageUrl     String?
   currentStage LifecycleStage @default(DESIGN)
+  category     AssetCategory  @default(GENERIC)
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
