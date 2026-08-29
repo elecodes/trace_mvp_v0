@@ -60,6 +60,7 @@ export async function getProjectById(id: string) {
   const signedAssets = await Promise.all(
     project.assets.map(async (asset) => ({
       ...asset,
+      rawImageUrl: asset.imageUrl,
       imageUrl: await signAssetImageUrl(asset.imageUrl),
     }))
   );

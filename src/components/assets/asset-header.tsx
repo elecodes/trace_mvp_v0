@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { FolderKanban, Calendar, Edit2, Loader2, Save, X } from 'lucide-react';
+import { FolderKanban, Calendar, Edit2, Loader2, Save, X, Copy, Check } from 'lucide-react';
 
 interface AssetHeaderProps {
   asset: {
@@ -16,6 +16,7 @@ interface AssetHeaderProps {
     title: string;
     description: string | null;
     imageUrl: string | null;
+    rawImageUrl?: string | null;
     currentStage: string;
     createdAt: Date | string;
     project: { id: string; name: string };
@@ -29,7 +30,15 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [description, setDescription] = useState(asset.description || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const router = useRouter();
+
+  const handleCopy = () => {
+    if (!asset.rawImageUrl) return;
+    navigator.clipboard.writeText(asset.rawImageUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +177,30 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
               <p className="text-sm text-slate-600 leading-relaxed">
                 {asset.description || 'Sin descripción ingresada.'}
               </p>
+
+              {asset.rawImageUrl && (
+                <div className="flex items-center gap-2 text-xs bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 w-fit max-w-full">
+                  <span className="font-semibold text-slate-500 shrink-0">Origen de Imagen:</span>
+                  <span className="text-slate-700 truncate select-all max-w-[200px] sm:max-w-[320px] font-mono text-[10px]" title={asset.rawImageUrl}>
+                    {asset.rawImageUrl}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="text-[10px] text-emerald-700 font-semibold hover:text-emerald-800 shrink-0 pl-1 cursor-pointer flex items-center gap-1"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3 w-3 text-emerald-600" /> Copiado
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" /> Copiar
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
               <div className="text-xs text-slate-400 flex items-center gap-1 pt-2 border-t border-slate-100">
                 <Calendar className="h-3.5 w-3.5 text-slate-400" /> Registrado el{' '}

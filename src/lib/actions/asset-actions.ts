@@ -87,6 +87,7 @@ export async function getAssets() {
   return Promise.all(
     assets.map(async (asset) => ({
       ...asset,
+      rawImageUrl: asset.imageUrl,
       imageUrl: await signAssetImageUrl(asset.imageUrl),
     }))
   );
@@ -110,6 +111,7 @@ export async function getAssetById(id: string) {
 
   return {
     ...asset,
+    rawImageUrl: asset.imageUrl,
     imageUrl: await signAssetImageUrl(asset.imageUrl),
   };
 }
@@ -386,6 +388,7 @@ export async function getDashboardMetrics() {
   const signedRecentAssets = await Promise.all(
     assetsList.map(async (asset) => ({
       ...asset,
+      rawImageUrl: asset.imageUrl,
       imageUrl: await signAssetImageUrl(asset.imageUrl),
     }))
   );
