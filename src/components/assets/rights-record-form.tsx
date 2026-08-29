@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useRouter } from 'next/navigation';
 import { upsertRightsRecord } from '@/lib/actions/asset-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,12 +12,36 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ShieldCheck, Loader2, CheckCircle2 } from 'lucide-react';
 
+const LICENSE_TYPES = [
+  { value: 'ORIGINAL', label: 'Original (Derechos propios / Obra original)' },
+  { value: 'STOCK_LICENSED', label: 'Stock / Licenciado (Adquirido bajo licencia)' },
+  { value: 'AI_GENERATED', label: 'Generado por IA (Sujeto a términos de herramienta)' },
+  { value: 'PUBLIC_DOMAIN', label: 'Dominio Público / Creative Commons' },
+  { value: 'UNKNOWN', label: 'Desconocido / Pendiente de verificación' },
+];
+
+const LEGAL_STATUSES = [
+  { value: 'PENDING', label: 'Pendiente' },
+  { value: 'APPROVED', label: 'Aprobado' },
+  { value: 'REJECTED', label: 'Rechazado' },
+];
+
 const rightsSchema = z.object({
-  licenseType: z.string().min(2, 'Especificar tipo de licencia (ej: Copyright, CC-BY, Propietaria)'),
-  ownerName: z.string().min(2, 'Nombre del titular o entidad de derechos'),
-  terms: z.string().optional(),
-  expirationDate: z.string().optional(),
-  isDocumented: z.boolean(),
+  licenseType: z.enum(['ORIGINAL', 'STOCK_LICENSED', 'AI_GENERATED', 'PUBLIC_DOMAIN', 'UNKNOWN']),
+  sourceName: z.string().min(2, 'Especificá el titular o la fuente de los derechos'),
+  licenseDocUrl: z.string().url('Ingresá una URL válida (ej: https://ejemplo.com)').or(z.literal('')),
+  isAiGenerated: z.boolean(),
+  aiToolName: z.string().optional(),
+  legalStatus: z.enum(['APPROVED', 'PENDING', 'REJECTED']),
+  notes: z.string().optional(),
+}).refine((data) => {
+  if (data.isAiGenerated && (!data.aiToolName || data.aiToolName.trim().length === 0)) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Especificá el nombre de la herramienta de IA utilizada',
+  path: ['aiToolName'],
 });
 
 type RightsFormValues = z.infer<typeof rightsSchema>;
@@ -24,11 +49,13 @@ type RightsFormValues = z.infer<typeof rightsSchema>;
 interface RightsRecordFormProps {
   assetId: string;
   initialData?: {
-    licenseType: string;
-    ownerName: string;
-    terms?: string | null;
-    expirationDate?: Date | null;
-    isDocumented: boolean;
+    licenseType: 'ORIGINAL' | 'STOCK_LICENSED' | 'AI_GENERATED' | 'PUBLIC_DOMAIN' | 'UNKNOWN';
+    sourceName?: string | null;
+    licenseDocUrl?: string | null;
+    isAiGenerated: boolean;
+    aiToolName?: string | null;
+    legalStatus: 'APPROVED' | 'PENDING' | 'REJECTED';
+    notes?: string | null;
   } | null;
 }
 
@@ -36,47 +63,63 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const formattedDate = initialData?.expirationDate
-    ? new Date(initialData.expirationDate).toISOString().split('T')[0]
-    : '';
+  const router = useRouter();
 
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<RightsFormValues>({
     resolver: zodResolver(rightsSchema),
     defaultValues: {
-      licenseType: initialData?.licenseType || 'Licencia Propietaria',
-      ownerName: initialData?.ownerName || '',
-      terms: initialData?.terms || '',
-      expirationDate: formattedDate,
-      isDocumented: initialData?.isDocumented ?? true,
+      licenseType: initialData?.licenseType || 'UNKNOWN',
+      sourceName: initialData?.sourceName || '',
+      licenseDocUrl: initialData?.licenseDocUrl || '',
+      isAiGenerated: initialData?.isAiGenerated ?? false,
+      aiToolName: initialData?.aiToolName || '',
+      legalStatus: initialData?.legalStatus || 'PENDING',
+      notes: initialData?.notes || '',
     },
   });
 
-  const onSubmit = async (data: RightsFormValues) => {
+  const isAiGenerated = watch('isAiGenerated');
+
+  // Clear AI tool name if checkbox is unchecked
+  useEffect(() => {
+    if (!isAiGenerated) {
+      setValue('aiToolName', '');
+    }
+  }, [isAiGenerated, setValue]);
+
+  const onSubmit = async (values: RightsFormValues) => {
     setLoading(true);
     setError(null);
     setSuccess(false);
 
     try {
-      await upsertRightsRecord(assetId, data);
+      await upsertRightsRecord(assetId, {
+        ...values,
+        licenseDocUrl: values.licenseDocUrl || null,
+        aiToolName: values.isAiGenerated ? values.aiToolName : null,
+        notes: values.notes || null,
+      });
       setSuccess(true);
+      router.refresh();
       setTimeout(() => setSuccess(false), 4000);
     } catch (err: any) {
-      setError(err.message || 'Error al guardar registro de derechos');
+      setError(err.message || 'Error al guardar el registro de derechos');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="border-slate-200 shadow-sm bg-white">
       <CardHeader>
-        <CardTitle className="text-md font-semibold flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-blue-600" /> Registro de Derechos y Licencia (RightsRecord)
+        <CardTitle className="text-md font-semibold flex items-center gap-2 text-slate-800">
+          <ShieldCheck className="h-5 w-5 text-emerald-600" /> Registro de Derechos y Licencia (RightsRecord)
         </CardTitle>
         <CardDescription>
           Documentación legal de propiedad intelectual, licencias o titularidad vinculada a este asset.
@@ -99,63 +142,117 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="licenseType">Tipo de Licencia *</Label>
-              <Input
+              <select
                 id="licenseType"
-                placeholder="Ej: Copyright, Creative Commons, Exclusiva"
                 {...register('licenseType')}
-              />
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {LICENSE_TYPES.map((lt) => (
+                  <option key={lt.value} value={lt.value}>
+                    {lt.label}
+                  </option>
+                ))}
+              </select>
               {errors.licenseType && (
                 <p className="text-xs text-red-500">{errors.licenseType.message}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ownerName">Titular / Propietario *</Label>
+              <Label htmlFor="sourceName">Titular / Origen de Derechos *</Label>
               <Input
-                id="ownerName"
-                placeholder="Ej: Empresa S.A. o Nombre de autor"
-                {...register('ownerName')}
+                id="sourceName"
+                placeholder="Ej: Netflix España, Diseñador X, Getty Images"
+                {...register('sourceName')}
               />
-              {errors.ownerName && (
-                <p className="text-xs text-red-500">{errors.ownerName.message}</p>
+              {errors.sourceName && (
+                <p className="text-xs text-red-500">{errors.sourceName.message}</p>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="expirationDate">Vencimiento (opcional)</Label>
-              <Input id="expirationDate" type="date" {...register('expirationDate')} />
+              <Label htmlFor="licenseDocUrl">Enlace al Documento de Licencia / Contrato</Label>
+              <Input
+                id="licenseDocUrl"
+                type="url"
+                placeholder="https://drive.google.com/..."
+                {...register('licenseDocUrl')}
+              />
+              {errors.licenseDocUrl && (
+                <p className="text-xs text-red-500">{errors.licenseDocUrl.message}</p>
+              )}
             </div>
 
-            <div className="space-y-1.5 flex flex-col justify-end">
-              <label className="flex items-center gap-2 cursor-pointer p-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100">
-                <input
-                  type="checkbox"
-                  {...register('isDocumented')}
-                  className="h-4 w-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
-                />
-                <span className="text-xs font-semibold text-slate-800">
-                  Marcar como Derechos Verificados / Documentados
-                </span>
-              </label>
+            <div className="space-y-1.5">
+              <Label htmlFor="legalStatus">Estado de Verificación *</Label>
+              <select
+                id="legalStatus"
+                {...register('legalStatus')}
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {LEGAL_STATUSES.map((ls) => (
+                  <option key={ls.value} value={ls.value}>
+                    {ls.label}
+                  </option>
+                ))}
+              </select>
+              {errors.legalStatus && (
+                <p className="text-xs text-red-500">{errors.legalStatus.message}</p>
+              )}
             </div>
           </div>
 
+          <div className="p-4 rounded-lg border border-slate-100 bg-slate-50/50 space-y-3">
+            <div className="flex items-center">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('isAiGenerated')}
+                  className="h-4 w-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                />
+                <span className="text-xs font-semibold text-slate-800">
+                  ¿Este asset fue generado total o parcialmente mediante Inteligencia Artificial?
+                </span>
+              </label>
+            </div>
+
+            {isAiGenerated && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <Label htmlFor="aiToolName">Herramienta de IA utilizada *</Label>
+                <Input
+                  id="aiToolName"
+                  placeholder="Ej: Midjourney v6, DALL-E 3, Adobe Firefly"
+                  {...register('aiToolName')}
+                />
+                {errors.aiToolName && (
+                  <p className="text-xs text-red-500">{errors.aiToolName.message}</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-1.5">
-            <Label htmlFor="terms">Términos o Restricciones</Label>
+            <Label htmlFor="notes">Notas o Restricciones Contractuales</Label>
             <textarea
-              id="terms"
+              id="notes"
               rows={2}
-              placeholder="Detalle de términos contractuales o restricciones de uso..."
-              {...register('terms')}
-              className="w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              placeholder="Ej: Válido únicamente para territorio europeo, expiración en emisión original, etc."
+              {...register('notes')}
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
 
           <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={loading} size="sm" className="bg-slate-900 hover:bg-slate-800">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar Derechos'}
+            <Button type="submit" disabled={loading} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer">
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...
+                </>
+              ) : (
+                'Guardar Derechos'
+              )}
             </Button>
           </div>
         </form>
