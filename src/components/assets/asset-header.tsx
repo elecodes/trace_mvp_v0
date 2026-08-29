@@ -33,9 +33,20 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [copied, setCopied] = useState(false);
   const router = useRouter();
 
+  const getFullDisplayUrl = (rawPath: string | null | undefined): string => {
+    if (!rawPath) return '';
+    if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+      return rawPath;
+    }
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    return `${supabaseUrl}/storage/v1/object/private/asset-images/${rawPath}`;
+  };
+
+  const displayUrl = getFullDisplayUrl(asset.rawImageUrl);
+
   const handleCopy = () => {
-    if (!asset.rawImageUrl) return;
-    navigator.clipboard.writeText(asset.rawImageUrl);
+    if (!displayUrl) return;
+    navigator.clipboard.writeText(displayUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -181,8 +192,8 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
               {asset.rawImageUrl && (
                 <div className="flex items-center gap-2 text-xs bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 w-fit max-w-full">
                   <span className="font-semibold text-slate-500 shrink-0">Origen de Imagen:</span>
-                  <span className="text-slate-700 truncate select-all max-w-[200px] sm:max-w-[320px] font-mono text-[10px]" title={asset.rawImageUrl}>
-                    {asset.rawImageUrl}
+                  <span className="text-slate-700 truncate select-all max-w-[200px] sm:max-w-[320px] font-mono text-[10px]" title={displayUrl}>
+                    {displayUrl}
                   </span>
                   <button
                     type="button"
