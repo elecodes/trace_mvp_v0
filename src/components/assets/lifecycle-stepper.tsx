@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LifecycleStatus } from '@prisma/client';
+import { LifecycleStage } from '@prisma/client';
 import { updateAssetStatus } from '@/lib/actions/asset-actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,13 +10,13 @@ import { cn } from '@/components/ui/button';
 
 interface LifecycleStepperProps {
   assetId: string;
-  currentStatus: LifecycleStatus;
+  currentStage: LifecycleStage;
 }
 
-const STAGES: { key: LifecycleStatus; label: string; description: string; stepNumber: number }[] = [
+const STAGES: { key: LifecycleStage; label: string; description: string; stepNumber: number }[] = [
   {
-    key: 'CONCEPT',
-    label: '1. Concepción',
+    key: 'DESIGN',
+    label: '1. Diseño',
     description: 'Diseño e idea inicial',
     stepNumber: 1,
   },
@@ -27,34 +27,34 @@ const STAGES: { key: LifecycleStatus; label: string; description: string; stepNu
     stepNumber: 2,
   },
   {
-    key: 'IN_USE',
-    label: '3. En Uso',
-    description: 'Operativo y activo',
+    key: 'SHOOTING',
+    label: '3. Rodaje',
+    description: 'En uso en set/rodaje',
     stepNumber: 3,
   },
   {
-    key: 'END_OF_LIFE',
-    label: '4. Fin de Vida',
+    key: 'FINAL_DESTINATION',
+    label: '4. Destino Final',
     description: 'Reciclaje / Retiro',
     stepNumber: 4,
   },
 ];
 
-export function LifecycleStepper({ assetId, currentStatus }: LifecycleStepperProps) {
+export function LifecycleStepper({ assetId, currentStage }: LifecycleStepperProps) {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState('');
   const [showNotesInput, setShowNotesInput] = useState(false);
-  const [targetStatus, setTargetStatus] = useState<LifecycleStatus | null>(null);
+  const [targetStage, setTargetStage] = useState<LifecycleStage | null>(null);
 
-  const currentIndex = STAGES.findIndex((s) => s.key === currentStatus);
+  const currentIndex = STAGES.findIndex((s) => s.key === currentStage);
 
-  const handleStateChange = async (newStatus: LifecycleStatus) => {
+  const handleStageChange = async (newStage: LifecycleStage) => {
     setLoading(true);
     try {
-      await updateAssetStatus(assetId, newStatus, notes);
+      await updateAssetStatus(assetId, newStage, notes);
       setShowNotesInput(false);
       setNotes('');
-      setTargetStatus(null);
+      setTargetStage(null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -62,9 +62,9 @@ export function LifecycleStepper({ assetId, currentStatus }: LifecycleStepperPro
     }
   };
 
-  const handleSelectStage = (stageKey: LifecycleStatus) => {
-    if (stageKey === currentStatus) return;
-    setTargetStatus(stageKey);
+  const handleSelectStage = (stageKey: LifecycleStage) => {
+    if (stageKey === currentStage) return;
+    setTargetStage(stageKey);
     setShowNotesInput(true);
   };
 
@@ -76,7 +76,7 @@ export function LifecycleStepper({ assetId, currentStatus }: LifecycleStepperPro
             <Sparkles className="h-5 w-5 text-emerald-500" /> Ciclo de Vida del Asset
           </CardTitle>
           <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Estado Actual: {STAGES[currentIndex]?.label}
+            Etapa Actual: {STAGES[currentIndex]?.label}
           </span>
         </div>
       </CardHeader>
@@ -86,7 +86,7 @@ export function LifecycleStepper({ assetId, currentStatus }: LifecycleStepperPro
           {STAGES.map((stage, idx) => {
             const isPassed = idx < currentIndex;
             const isCurrent = idx === currentIndex;
-            const isTarget = stage.key === targetStatus;
+            const isTarget = stage.key === targetStage;
 
             return (
               <button
@@ -95,7 +95,7 @@ export function LifecycleStepper({ assetId, currentStatus }: LifecycleStepperPro
                 onClick={() => handleSelectStage(stage.key)}
                 disabled={loading}
                 className={cn(
-                  'p-4 rounded-xl border text-left transition-all relative flex flex-col justify-between group',
+                  'p-4 rounded-xl border text-left transition-all relative flex flex-col justify-between group cursor-pointer',
                   isCurrent
                     ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500'
                     : isPassed
@@ -130,12 +130,12 @@ export function LifecycleStepper({ assetId, currentStatus }: LifecycleStepperPro
         </div>
 
         {/* Notes input when user selects target transition */}
-        {showNotesInput && targetStatus && (
+        {showNotesInput && targetStage && (
           <div className="mt-4 p-4 rounded-lg bg-blue-50/60 border border-blue-200 space-y-3">
             <h5 className="text-sm font-semibold text-blue-900">
-              Confirmar cambio de estado a:{' '}
+              Confirmar cambio de etapa a:{' '}
               <span className="font-bold underline">
-                {STAGES.find((s) => s.key === targetStatus)?.label}
+                {STAGES.find((s) => s.key === targetStage)?.label}
               </span>
             </h5>
             <div>
@@ -157,7 +157,7 @@ export function LifecycleStepper({ assetId, currentStatus }: LifecycleStepperPro
                 size="sm"
                 onClick={() => {
                   setShowNotesInput(false);
-                  setTargetStatus(null);
+                  setTargetStage(null);
                 }}
               >
                 Cancelar
@@ -166,13 +166,13 @@ export function LifecycleStepper({ assetId, currentStatus }: LifecycleStepperPro
                 type="button"
                 size="sm"
                 disabled={loading}
-                onClick={() => handleStateChange(targetStatus)}
+                onClick={() => handleStageChange(targetStage)}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  'Transicionar Estado'
+                  'Transicionar Etapa'
                 )}
               </Button>
             </div>

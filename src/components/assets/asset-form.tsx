@@ -26,6 +26,7 @@ interface AssetFormProps {
 }
 
 export function AssetForm({ projects }: AssetFormProps) {
+  const [assetId] = useState(() => crypto.randomUUID());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -47,12 +48,16 @@ export function AssetForm({ projects }: AssetFormProps) {
   });
 
   const imageUrl = watch('imageUrl');
+  const projectId = watch('projectId');
 
   const onSubmit = async (data: AssetFormValues) => {
     setLoading(true);
     setError(null);
     try {
-      const asset = await createAsset(data);
+      const asset = await createAsset({
+        id: assetId,
+        ...data,
+      });
       router.push(`/assets/${asset.id}`);
     } catch (err: any) {
       setError(err.message || 'Error al crear el asset');
@@ -106,6 +111,8 @@ export function AssetForm({ projects }: AssetFormProps) {
         <ImageUploader
           value={imageUrl}
           onChange={(url) => setValue('imageUrl', url, { shouldValidate: true })}
+          projectId={projectId}
+          assetId={assetId}
         />
       </div>
 

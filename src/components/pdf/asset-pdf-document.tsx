@@ -9,7 +9,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justify: 'space-between',
+    justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#cbd5e1',
@@ -96,20 +96,24 @@ interface AssetPdfProps {
     title: string;
     description?: string | null;
     imageUrl?: string | null;
-    status: string;
+    currentStage: string;
     createdAt: Date;
     project: { name: string };
     rightsRecord?: {
       licenseType: string;
-      ownerName: string;
-      terms?: string | null;
-      expirationDate?: Date | null;
-      isDocumented: boolean;
+      sourceName?: string | null;
+      licenseDocUrl?: string | null;
+      isAiGenerated: boolean;
+      aiToolName?: string | null;
+      legalStatus: string;
+      notes?: string | null;
     } | null;
     sustainabilityRecord?: {
-      carbonFootprintKg: number;
-      weightKg: number;
-      recyclablePercent: number;
+      material?: string | null;
+      weightKg?: number | null;
+      emissionFactor?: number | null;
+      estimatedCo2eqKg?: number | null;
+      circularityOutcome: string;
       notes?: string | null;
     } | null;
   };
@@ -127,7 +131,7 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
               Identificador Único: {asset.id} | Proyecto: {asset.project.name}
             </Text>
           </View>
-          <Text style={styles.badge}>Estado: {asset.status}</Text>
+          <Text style={styles.badge}>Etapa: {asset.currentStage}</Text>
         </View>
 
         {/* Overview */}
@@ -163,20 +167,26 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
                 <Text style={styles.label}>Tipo de Licencia:</Text>
                 <Text style={styles.value}>{asset.rightsRecord.licenseType}</Text>
               </View>
-              <View style={styles.row}>
-                <Text style={styles.label}>Titular de Derechos:</Text>
-                <Text style={styles.value}>{asset.rightsRecord.ownerName}</Text>
-              </View>
-              <View style={styles.row}>
-                <Text style={styles.label}>Estado de Verificación:</Text>
-                <Text style={styles.value}>
-                  {asset.rightsRecord.isDocumented ? 'VERIFICADO / DOCUMENTADO' : 'PENDIENTE'}
-                </Text>
-              </View>
-              {asset.rightsRecord.terms && (
+              {asset.rightsRecord.sourceName && (
                 <View style={styles.row}>
-                  <Text style={styles.label}>Términos:</Text>
-                  <Text style={styles.value}>{asset.rightsRecord.terms}</Text>
+                  <Text style={styles.label}>Origen / Fuente:</Text>
+                  <Text style={styles.value}>{asset.rightsRecord.sourceName}</Text>
+                </View>
+              )}
+              {asset.rightsRecord.isAiGenerated && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Generado por IA:</Text>
+                  <Text style={styles.value}>Sí ({asset.rightsRecord.aiToolName || 'Herramienta no especificada'})</Text>
+                </View>
+              )}
+              <View style={styles.row}>
+                <Text style={styles.label}>Estado Legal:</Text>
+                <Text style={styles.value}>{asset.rightsRecord.legalStatus}</Text>
+              </View>
+              {asset.rightsRecord.notes && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Notas:</Text>
+                  <Text style={styles.value}>{asset.rightsRecord.notes}</Text>
                 </View>
               )}
             </>
@@ -192,20 +202,30 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
           <Text style={styles.sectionTitle}>3. Registro de Sustentabilidad</Text>
           {asset.sustainabilityRecord ? (
             <>
+              {asset.sustainabilityRecord.material && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Material principal:</Text>
+                  <Text style={styles.value}>{asset.sustainabilityRecord.material}</Text>
+                </View>
+              )}
+              {asset.sustainabilityRecord.weightKg !== null && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Peso:</Text>
+                  <Text style={styles.value}>{asset.sustainabilityRecord.weightKg} kg</Text>
+                </View>
+              )}
+              {asset.sustainabilityRecord.estimatedCo2eqKg !== null && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Huella CO₂eq estimada:</Text>
+                  <Text style={styles.value}>
+                    {asset.sustainabilityRecord.estimatedCo2eqKg} kg CO₂eq
+                  </Text>
+                </View>
+              )}
               <View style={styles.row}>
-                <Text style={styles.label}>Huella de Carbono:</Text>
+                <Text style={styles.label}>Resultado de Circularidad:</Text>
                 <Text style={styles.value}>
-                  {asset.sustainabilityRecord.carbonFootprintKg} kg CO₂eq
-                </Text>
-              </View>
-              <View style={styles.row}>
-                <Text style={styles.label}>Peso Total:</Text>
-                <Text style={styles.value}>{asset.sustainabilityRecord.weightKg} kg</Text>
-              </View>
-              <View style={styles.row}>
-                <Text style={styles.label}>Reciclabilidad:</Text>
-                <Text style={styles.value}>
-                  {asset.sustainabilityRecord.recyclablePercent}% del total
+                  {asset.sustainabilityRecord.circularityOutcome}
                 </Text>
               </View>
               {asset.sustainabilityRecord.notes && (

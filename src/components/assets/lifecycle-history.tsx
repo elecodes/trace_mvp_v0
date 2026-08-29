@@ -3,8 +3,8 @@ import { History, Calendar } from 'lucide-react';
 
 interface Event {
   id: string;
-  previousStatus: string | null;
-  newStatus: string;
+  previousStage: string | null;
+  newStage: string;
   notes: string | null;
   timestamp: Date;
 }
@@ -31,8 +31,8 @@ export function LifecycleHistory({ events }: LifecycleHistoryProps) {
                 <span className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-white" />
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
                   <span>
-                    {event.previousStatus ? `${event.previousStatus} ➔ ` : ''}
-                    {event.newStatus}
+                    {event.previousStage ? `${event.previousStage} ➔ ` : ''}
+                    {event.newStage}
                   </span>
                   <span className="text-[11px] font-normal text-slate-400 flex items-center gap-1">
                     <Calendar className="h-3 w-3" />

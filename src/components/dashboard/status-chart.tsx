@@ -16,10 +16,10 @@ interface StatusChartProps {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  CONCEPT: 'Concepción',
+  DESIGN: 'Diseño',
   PRODUCTION: 'Producción',
-  IN_USE: 'En Uso',
-  END_OF_LIFE: 'Fin de Vida',
+  SHOOTING: 'Rodaje',
+  FINAL_DESTINATION: 'Destino Final',
 };
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#64748b'];

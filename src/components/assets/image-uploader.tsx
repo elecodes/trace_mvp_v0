@@ -1,24 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import imageCompression from 'browser-image-compression';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ImagePlus, Loader2, CheckCircle2, X } from 'lucide-react';
+import { ImagePlus, Loader2, X } from 'lucide-react';
 import Image from 'next/image';
 
 interface ImageUploaderProps {
   value?: string;
-  onChange: (url: string) => void;
+  onChange: (path: string) => void;
+  projectId: string;
+  assetId: string;
 }
 
-export function ImageUploader({ value, onChange }: ImageUploaderProps) {
+export function ImageUploader({ value, onChange, projectId, assetId }: ImageUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [compressing, setCompressing] = useState(false);
-  const [preview, setPreview] = useState<string | null>(value || null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  useEffect(() => {
+    if (!value) {
+      setPreview(null);
+      return;
+    }
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      setPreview(value);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchSignedUrl = async () => {
+      try {
+        const { data, error } = await supabase.storage
+          .from('asset-images')
+          .createSignedUrl(value, 3600);
+        if (error) throw error;
+        if (isMounted && data) {
+          setPreview(data.signedUrl);
+        }
+      } catch (err) {
+        console.error('Error fetching preview signed URL:', err);
+      }
+    };
+
+    fetchSignedUrl();
+    return () => {
+      isMounted = false;
+    };
+  }, [value, supabase]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,20 +61,31 @@ export function ImageUploader({ value, onChange }: ImageUploaderProps) {
     setLoading(true);
 
     try {
-      // 1. Client-side Image Compression
+      // 1. Get current authenticated user ID
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('Debes iniciar sesión para subir imágenes');
+      }
+
+      // 2. Client-side Image Compression
       setCompressing(true);
       const options = {
         maxSizeMB: 0.5, // Max 500KB
-        maxWidthOrHeight: 1200,
+        maxWidthOrHeight: 1600, // Max 1600px on the longest side
         useWebWorker: true,
       };
       const compressedFile = await imageCompression(file, options);
       setCompressing(false);
 
-      // 2. Upload to Supabase Storage bucket `asset-images`
+      // 3. Upload to Supabase Storage bucket `asset-images`
       const fileExt = compressedFile.type.split('/')[1] || 'jpg';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
+      
+      // Structured path: {userId}/{projectId}/{assetId}/{unique-file-name}.{ext}
+      const filePath = `${user.id}/${projectId}/${assetId}/${fileName}`;
 
       const { data, error: uploadError } = await supabase.storage
         .from('asset-images')
@@ -51,17 +95,11 @@ export function ImageUploader({ value, onChange }: ImageUploaderProps) {
         });
 
       if (uploadError) {
-        // If bucket does not exist yet or policy missing, show clear message
         throw new Error(uploadError.message || 'Error al subir la imagen a Supabase Storage');
       }
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('asset-images').getPublicUrl(data.path);
-
-      setPreview(publicUrl);
-      onChange(publicUrl);
+      // Return the storage path, e.g. "userId/projectId/assetId/filename"
+      onChange(data.path);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Error al procesar la imagen');
@@ -80,7 +118,7 @@ export function ImageUploader({ value, onChange }: ImageUploaderProps) {
     <div className="space-y-2">
       {error && (
         <div className="p-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded">
-          {error} (Asegúrate de haber creado el bucket `asset-images` en Supabase)
+          {error} (Asegúrate de haber creado el bucket `asset-images` privado en tu panel de Supabase)
         </div>
       )}
 
@@ -93,7 +131,7 @@ export function ImageUploader({ value, onChange }: ImageUploaderProps) {
               variant="destructive"
               size="sm"
               onClick={handleRemove}
-              className="gap-1"
+              className="gap-1 cursor-pointer"
             >
               <X className="h-4 w-4" /> Eliminar Imagen
             </Button>

@@ -7,10 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, ShieldCheck, Leaf, ArrowUpRight } from 'lucide-react';
 
 const STATUS_VARIANTS: Record<string, 'info' | 'warning' | 'success' | 'secondary'> = {
-  CONCEPT: 'info',
+  DESIGN: 'info',
   PRODUCTION: 'warning',
-  IN_USE: 'success',
-  END_OF_LIFE: 'secondary',
+  SHOOTING: 'success',
+  FINAL_DESTINATION: 'secondary',
 };
 
 export default async function AssetsPage() {
@@ -60,8 +60,8 @@ export default async function AssetsPage() {
                     </div>
                   )}
                   <div className="absolute top-3 right-3">
-                    <Badge variant={STATUS_VARIANTS[asset.status] || 'default'}>
-                      {asset.status}
+                    <Badge variant={STATUS_VARIANTS[asset.currentStage] || 'default'}>
+                      {asset.currentStage}
                     </Badge>
                   </div>
                 </div>
@@ -77,13 +77,13 @@ export default async function AssetsPage() {
                   <div className="flex items-center gap-4 text-xs pt-2 border-t border-slate-100">
                     <span className="flex items-center gap-1 text-slate-600">
                       <Leaf className="h-3.5 w-3.5 text-emerald-600" />
-                      {asset.sustainabilityRecord
-                        ? `${asset.sustainabilityRecord.carbonFootprintKg} kg CO₂`
+                      {asset.sustainabilityRecord?.estimatedCo2eqKg !== null && asset.sustainabilityRecord?.estimatedCo2eqKg !== undefined
+                        ? `${asset.sustainabilityRecord.estimatedCo2eqKg} kg CO₂`
                         : 'Sin CO₂'}
                     </span>
                     <span className="flex items-center gap-1 text-slate-600">
                       <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
-                      {asset.rightsRecord?.isDocumented ? 'Derechos OK' : 'Sin Derechos'}
+                      {asset.rightsRecord ? 'Derechos OK' : 'Sin Derechos'}
                     </span>
                   </div>
                 </div>
