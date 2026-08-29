@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '@/components/ui/button';
 
+import { useRouter } from 'next/navigation';
+
 interface LifecycleStepperProps {
   assetId: string;
   currentStage: LifecycleStage;
@@ -45,6 +47,7 @@ export function LifecycleStepper({ assetId, currentStage }: LifecycleStepperProp
   const [notes, setNotes] = useState('');
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [targetStage, setTargetStage] = useState<LifecycleStage | null>(null);
+  const router = useRouter();
 
   const currentIndex = STAGES.findIndex((s) => s.key === currentStage);
 
@@ -55,6 +58,7 @@ export function LifecycleStepper({ assetId, currentStage }: LifecycleStepperProp
       setShowNotesInput(false);
       setNotes('');
       setTargetStage(null);
+      router.refresh();
     } catch (err) {
       console.error(err);
     } finally {
