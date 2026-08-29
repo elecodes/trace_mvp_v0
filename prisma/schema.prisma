@@ -8,22 +8,43 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum LifecycleStatus {
-  CONCEPT
+enum LifecycleStage {
+  DESIGN
   PRODUCTION
-  IN_USE
-  END_OF_LIFE
+  SHOOTING
+  FINAL_DESTINATION
+}
+
+enum LicenseType {
+  ORIGINAL
+  STOCK_LICENSED
+  AI_GENERATED
+  PUBLIC_DOMAIN
+  UNKNOWN
+}
+
+enum LegalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CircularityOutcome {
+  REUSED
+  DONATED
+  RECYCLED
+  DISCARDED
+  PENDING
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
   name      String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  projects  Project[]
-  assets    Asset[]
+  projects Project[]
 
   @@map("users")
 }
@@ -42,64 +63,66 @@ model Project {
 }
 
 model Asset {
-  id           String          @id @default(uuid())
+  id           String         @id @default(uuid())
   title        String
   description  String?
   imageUrl     String?
-  status       LifecycleStatus @default(CONCEPT)
-  
-  projectId    String
-  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStage LifecycleStage @default(DESIGN)
 
-  events                LifecycleEvent[]
-  rightsRecord          RightsRecord?
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  events               LifecycleEvent[]
+  rightsRecord         RightsRecord?
   sustainabilityRecord SustainabilityRecord?
 
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("assets")
 }
 
 model LifecycleEvent {
-  id             String          @id @default(uuid())
-  assetId        String
-  asset          Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  previousStatus LifecycleStatus?
-  newStatus      LifecycleStatus
-  notes          String?
-  timestamp      DateTime        @default(now())
+  id            String          @id @default(uuid())
+  assetId       String
+  asset         Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  previousStage LifecycleStage?
+  newStage      LifecycleStage
+  notes         String?
+  timestamp     DateTime        @default(now())
 
   @@map("lifecycle_events")
 }
 
 model RightsRecord {
-  id             String    @id @default(uuid())
-  assetId        String    @unique
-  asset          Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  licenseType    String
-  ownerName      String
-  terms          String?
-  expirationDate DateTime?
-  isDocumented   Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String      @id @default(uuid())
+  assetId       String      @unique
+  asset         Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  licenseType   LicenseType
+  sourceName    String?
+  licenseDocUrl String?
+  isAiGenerated Boolean     @default(false)
+  aiToolName    String?
+  legalStatus   LegalStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@map("rights_records")
 }
 
 model SustainabilityRecord {
-  id                String   @id @default(uuid())
-  assetId           String   @unique
-  asset             Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  carbonFootprintKg Float    @default(0.0)
-  weightKg          Float    @default(0.0)
-  recyclablePercent Float    @default(0.0)
-  notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String             @id @default(uuid())
+  assetId            String             @unique
+  asset              Asset              @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  material           String?
+  weightKg           Float?
+  emissionFactor     Float?
+  estimatedCo2eqKg   Float?
+  circularityOutcome CircularityOutcome @default(PENDING)
+  notes              String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   @@map("sustainability_records")
 }
