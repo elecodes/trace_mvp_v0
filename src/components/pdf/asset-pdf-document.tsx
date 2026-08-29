@@ -90,6 +90,35 @@ const styles = StyleSheet.create({
   },
 });
 
+const STAGE_LABELS: Record<string, string> = {
+  DESIGN: 'Diseño',
+  PRODUCTION: 'Producción',
+  SHOOTING: 'Rodaje',
+  FINAL_DESTINATION: 'Destino Final',
+};
+
+const LICENSE_LABELS: Record<string, string> = {
+  ORIGINAL: 'Original (Derechos propios / Obra original)',
+  STOCK_LICENSED: 'Stock / Licenciado (Adquirido bajo licencia)',
+  AI_GENERATED: 'Generado por IA (Sujeto a términos de herramienta)',
+  PUBLIC_DOMAIN: 'Dominio Público / Creative Commons',
+  UNKNOWN: 'Desconocido / Pendiente de verificación',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  APPROVED: 'Aprobado',
+  PENDING: 'Pendiente',
+  REJECTED: 'Rechazado',
+};
+
+const CIRCULARITY_LABELS: Record<string, string> = {
+  PENDING: 'Pendiente (En uso o sin destino final definido)',
+  REUSED: 'Reutilizado (Trasladado a otra producción / almacén)',
+  DONATED: 'Donado (Entregado a ONG, escuela u otra entidad)',
+  RECYCLED: 'Reciclado (Desarmado para recuperación de materiales)',
+  DISCARDED: 'Desechado / Residuo (Sin recuperación circular)',
+};
+
 interface AssetPdfProps {
   asset: {
     id: string;
@@ -120,6 +149,14 @@ interface AssetPdfProps {
 }
 
 export function AssetPdfDocument({ asset }: AssetPdfProps) {
+  const stageTranslated = STAGE_LABELS[asset.currentStage] || asset.currentStage;
+  const formattedDate = new Date(asset.createdAt).toLocaleDateString('es-ES', {
+    timeZone: 'Europe/Madrid',
+  });
+  const todayFormatted = new Date().toLocaleDateString('es-ES', {
+    timeZone: 'Europe/Madrid',
+  });
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -131,7 +168,7 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
               Identificador Único: {asset.id} | Proyecto: {asset.project.name}
             </Text>
           </View>
-          <Text style={styles.badge}>Etapa: {asset.currentStage}</Text>
+          <Text style={styles.badge}>Etapa: {stageTranslated}</Text>
         </View>
 
         {/* Overview */}
@@ -150,9 +187,7 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Fecha de Registro:</Text>
-                <Text style={styles.value}>
-                  {new Date(asset.createdAt).toLocaleDateString('es-AR')}
-                </Text>
+                <Text style={styles.value}>{formattedDate}</Text>
               </View>
             </View>
           </View>
@@ -165,7 +200,9 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
             <>
               <View style={styles.row}>
                 <Text style={styles.label}>Tipo de Licencia:</Text>
-                <Text style={styles.value}>{asset.rightsRecord.licenseType}</Text>
+                <Text style={styles.value}>
+                  {LICENSE_LABELS[asset.rightsRecord.licenseType] || asset.rightsRecord.licenseType}
+                </Text>
               </View>
               {asset.rightsRecord.sourceName && (
                 <View style={styles.row}>
@@ -176,12 +213,16 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
               {asset.rightsRecord.isAiGenerated && (
                 <View style={styles.row}>
                   <Text style={styles.label}>Generado por IA:</Text>
-                  <Text style={styles.value}>Sí ({asset.rightsRecord.aiToolName || 'Herramienta no especificada'})</Text>
+                  <Text style={styles.value}>
+                    Sí ({asset.rightsRecord.aiToolName || 'Herramienta no especificada'})
+                  </Text>
                 </View>
               )}
               <View style={styles.row}>
                 <Text style={styles.label}>Estado Legal:</Text>
-                <Text style={styles.value}>{asset.rightsRecord.legalStatus}</Text>
+                <Text style={styles.value}>
+                  {STATUS_LABELS[asset.rightsRecord.legalStatus] || asset.rightsRecord.legalStatus}
+                </Text>
               </View>
               {asset.rightsRecord.notes && (
                 <View style={styles.row}>
@@ -225,7 +266,8 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
               <View style={styles.row}>
                 <Text style={styles.label}>Resultado de Circularidad:</Text>
                 <Text style={styles.value}>
-                  {asset.sustainabilityRecord.circularityOutcome}
+                  {CIRCULARITY_LABELS[asset.sustainabilityRecord.circularityOutcome] ||
+                    asset.sustainabilityRecord.circularityOutcome}
                 </Text>
               </View>
               {asset.sustainabilityRecord.notes && (
@@ -244,7 +286,7 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
 
         {/* Footer */}
         <Text style={styles.footer}>
-          Documento generado automáticamente por TRACE Asset Lifecycle System — {new Date().toLocaleDateString('es-AR')}
+          Documento generado automáticamente por TRACE Asset Lifecycle System — {todayFormatted}
         </Text>
       </Page>
     </Document>
