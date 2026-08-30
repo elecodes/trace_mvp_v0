@@ -210,17 +210,25 @@ export async function processAndCacheExternalImage(
 
     if (aiData?.rightsRecord) {
       console.log(`[Background Image Cache] Auto-populating RightsRecord for ${assetId}`);
+      const existingRights = await prisma.rightsRecord.findUnique({
+        where: { assetId }
+      });
+
+      const newLicense = aiData.rightsRecord.licenseType || 'UNKNOWN';
+      const existingLicense = existingRights?.licenseType;
+      const shouldUpdateLicense = !existingLicense || existingLicense === 'UNKNOWN' || newLicense !== 'UNKNOWN';
+
       await prisma.rightsRecord.upsert({
         where: { assetId },
         update: {
-          licenseType: aiData.rightsRecord.licenseType || 'UNKNOWN',
-          sourceName: aiData.rightsRecord.sourceName || null,
-          licenseDocUrl: aiData.rightsRecord.licenseDocUrl || null,
-          notes: aiData.rightsRecord.notes || null,
+          licenseType: shouldUpdateLicense ? newLicense : existingLicense,
+          sourceName: (shouldUpdateLicense || !existingRights?.sourceName) ? (aiData.rightsRecord.sourceName || null) : existingRights.sourceName,
+          licenseDocUrl: (shouldUpdateLicense || !existingRights?.licenseDocUrl) ? (aiData.rightsRecord.licenseDocUrl || null) : existingRights.licenseDocUrl,
+          notes: (shouldUpdateLicense || !existingRights?.notes) ? (aiData.rightsRecord.notes || null) : existingRights.notes,
         },
         create: {
           assetId,
-          licenseType: aiData.rightsRecord.licenseType || 'UNKNOWN',
+          licenseType: newLicense,
           sourceName: aiData.rightsRecord.sourceName || null,
           licenseDocUrl: aiData.rightsRecord.licenseDocUrl || null,
           notes: aiData.rightsRecord.notes || null,
