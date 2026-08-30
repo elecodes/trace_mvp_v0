@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Box, CloudDrizzle, ShieldCheck } from 'lucide-react';
+import { Box, Leaf, ShieldCheck } from 'lucide-react';
 
 interface MetricsCardsProps {
   totalAssets: number;
@@ -43,7 +43,7 @@ export function MetricsCards({
             <p className="text-xs text-emerald-600 font-medium mt-1">Suma acumulada de impacto</p>
           </div>
           <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <CloudDrizzle className="h-6 w-6" />
+            <Leaf className="h-6 w-6" />
           </div>
         </CardContent>
       </Card>

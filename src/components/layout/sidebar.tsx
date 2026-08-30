@@ -26,26 +26,56 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-          const Icon = item.icon;
-          return (
+      <nav className="flex-1 px-3 py-6 space-y-6">
+        <div>
+          <div className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Control de Impacto
+          </div>
+          <Link
+            href="/dashboard"
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              pathname === '/dashboard'
+                ? 'bg-emerald-500/10 text-emerald-400 font-semibold'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+            )}
+          >
+            <LayoutDashboard className={cn('h-5 w-5', pathname === '/dashboard' ? 'text-emerald-400' : 'text-slate-400')} />
+            Dashboard
+          </Link>
+        </div>
+
+        <div>
+          <div className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Producción Física
+          </div>
+          <div className="space-y-1">
             <Link
-              key={item.name}
-              href={item.href}
+              href="/projects"
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                isActive
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                pathname.startsWith('/projects')
                   ? 'bg-emerald-500/10 text-emerald-400 font-semibold'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
               )}
             >
-              <Icon className={cn('h-5 w-5', isActive ? 'text-emerald-400' : 'text-slate-400')} />
-              {item.name}
+              <FolderKanban className={cn('h-5 w-5', pathname.startsWith('/projects') ? 'text-emerald-400' : 'text-slate-400')} />
+              Proyectos
             </Link>
-          );
-        })}
+            <Link
+              href="/assets"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                pathname.startsWith('/assets')
+                  ? 'bg-emerald-500/10 text-emerald-400 font-semibold'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              )}
+            >
+              <Box className={cn('h-5 w-5', pathname.startsWith('/assets') ? 'text-emerald-400' : 'text-slate-400')} />
+              Assets / Catálogo
+            </Link>
+          </div>
+        </div>
       </nav>
 
       <div className="p-4 m-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-xs text-slate-400">
