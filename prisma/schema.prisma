@@ -46,46 +46,58 @@ enum CircularityOutcome {
   PENDING
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum ProjectRole {
+  PRODUCER
+  ART
+  LEGAL
+}
 
-  projects Project[]
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  name           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  projects       Project[]
+  projectMembers ProjectMember[]
 
   @@map("users")
 }
 
 model Project {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String
   description String?
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   assets      Asset[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sets        Set[]
+  members     ProjectMember[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   @@map("projects")
 }
 
 model Asset {
-  id           String         @id @default(uuid())
-  title        String
-  description  String?
-  imageUrl     String?
+  id               String         @id @default(uuid())
+  title            String
+  description      String?
+  imageUrl         String?
   originalImageUrl String?
-  currentStage LifecycleStage @default(DESIGN)
-  category     AssetCategory  @default(GENERIC)
+  currentStage     LifecycleStage @default(DESIGN)
+  category         AssetCategory  @default(GENERIC)
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  setId String?
+  set   Set?    @relation(fields: [setId], references: [id], onDelete: SetNull)
+
   events               LifecycleEvent[]
   rightsRecord         RightsRecord?
   sustainabilityRecord SustainabilityRecord?
+  shootingRecord       ShootingRecord?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -136,4 +148,45 @@ model SustainabilityRecord {
   updatedAt          DateTime           @updatedAt
 
   @@map("sustainability_records")
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      ProjectRole @default(ART)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Set {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  location  String?
+  notes     String?
+  assets    Asset[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sets")
+}
+
+model ShootingRecord {
+  id              String   @id @default(uuid())
+  assetId         String   @unique
+  asset           Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  usedInShooting  Boolean  @default(false)
+  visibleOnCamera Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("shooting_records")
 }

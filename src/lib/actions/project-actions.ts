@@ -47,7 +47,25 @@ export async function getProjectById(id: string) {
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
+      sets: {
+        include: {
+          _count: {
+            select: { assets: true }
+          }
+        },
+        orderBy: { createdAt: 'asc' }
+      },
+      members: {
+        include: {
+          user: true
+        }
+      },
       assets: {
+        include: {
+          rightsRecord: true,
+          sustainabilityRecord: true,
+          set: true
+        },
         orderBy: { createdAt: 'desc' },
       },
     },

@@ -100,7 +100,13 @@ export async function getAssetById(id: string) {
   const asset = await prisma.asset.findUnique({
     where: { id, project: { userId: user.id } },
     include: {
-      project: true,
+      project: {
+        include: {
+          sets: true
+        }
+      },
+      set: true,
+      shootingRecord: true,
       events: {
         orderBy: { timestamp: 'desc' },
       },

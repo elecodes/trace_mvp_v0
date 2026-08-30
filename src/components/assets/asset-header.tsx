@@ -33,6 +33,12 @@ interface AssetHeaderProps {
     sustainabilityRecord?: {
       material?: string | null;
       weightKg?: number | null;
+      circularityOutcome?: string | null;
+    } | null;
+    shootingRecord?: {
+      usedInShooting: boolean;
+      visibleOnCamera: boolean;
+      notes?: string | null;
     } | null;
   };
   stageLabels: Record<string, string>;
@@ -414,6 +420,15 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                     )}
                     {asset.sustainabilityRecord?.weightKg !== undefined && asset.sustainabilityRecord?.weightKg !== null && (
                       <div><strong>Peso:</strong> {asset.sustainabilityRecord.weightKg} kg</div>
+                    )}
+                    {asset.sustainabilityRecord?.circularityOutcome && (
+                      <div><strong>Circularidad:</strong> {asset.sustainabilityRecord.circularityOutcome === 'PENDING' ? 'Reutilizable (Pendiente)' : asset.sustainabilityRecord.circularityOutcome}</div>
+                    )}
+                    {asset.shootingRecord && (
+                      <div className="col-span-1 sm:col-span-2 border-t border-slate-100 pt-1.5 flex gap-4 text-slate-500">
+                        <div><strong>En Rodaje:</strong> {asset.shootingRecord.usedInShooting ? 'Sí' : 'No'}</div>
+                        <div><strong>En Cámara:</strong> {asset.shootingRecord.visibleOnCamera ? 'Sí' : 'No'}</div>
+                      </div>
                     )}
                     {asset.rightsRecord?.notes && (
                       <div className="col-span-1 sm:col-span-2 text-slate-500 italic mt-0.5 border-t border-slate-100 pt-1">

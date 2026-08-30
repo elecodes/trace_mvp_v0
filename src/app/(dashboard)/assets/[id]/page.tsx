@@ -8,6 +8,7 @@ import { LifecycleStepper } from '@/components/assets/lifecycle-stepper';
 import { LifecycleHistory } from '@/components/assets/lifecycle-history';
 import { RightsRecordForm } from '@/components/assets/rights-record-form';
 import { SustainabilityRecordForm } from '@/components/assets/sustainability-record-form';
+import { AssetProductionForm } from '@/components/assets/asset-production-form';
 import { PdfDownloadButton } from '@/components/pdf/pdf-download-button';
 import { AssetHeader } from '@/components/assets/asset-header';
 import { ArrowLeft } from 'lucide-react';
@@ -52,10 +53,18 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
         <LifecycleHistory events={asset.events} />
       </div>
 
-      {/* Grid: Forms */}
+      {/* Grid: Production and Metadata Forms */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RightsRecordForm assetId={asset.id} initialData={asset.rightsRecord as any} />
-        <SustainabilityRecordForm assetId={asset.id} initialData={asset.sustainabilityRecord as any} />
+        <AssetProductionForm
+          assetId={asset.id}
+          currentSetId={asset.setId}
+          sets={asset.project.sets}
+          shootingRecord={asset.shootingRecord}
+        />
+        <div className="space-y-6">
+          <RightsRecordForm assetId={asset.id} initialData={asset.rightsRecord as any} />
+          <SustainabilityRecordForm assetId={asset.id} initialData={asset.sustainabilityRecord as any} />
+        </div>
       </div>
     </div>
   );
