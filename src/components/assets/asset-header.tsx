@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { FolderKanban, Calendar, Edit2, Loader2, Save, X, Copy, Check } from 'lucide-react';
 import { ImageUploader } from '@/components/assets/image-uploader';
+import { analyzeAssetImage, analyzeAssetImageUrl } from '@/lib/actions/ai-actions';
 
 interface AssetHeaderProps {
   asset: {
@@ -41,9 +42,45 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [title, setTitle] = useState(asset.title);
   const [description, setDescription] = useState(asset.description || '');
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const router = useRouter();
+
+  const handleImageSelected = async (base64: string, mimeType: string) => {
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const data = await analyzeAssetImage(base64, mimeType);
+      if (data && data.description) {
+        setDescription(data.description);
+      }
+    } catch (err) {
+      console.error('Error al analizar la imagen:', err);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleUrlAnalyze = async () => {
+    if (!manualUrl || (!manualUrl.startsWith('http://') && !manualUrl.startsWith('https://'))) {
+      setError('Por favor ingresa una URL válida');
+      return;
+    }
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const data = await analyzeAssetImageUrl(manualUrl);
+      if (data && data.description) {
+        setDescription(data.description);
+      }
+    } catch (err) {
+      console.error('Error al analizar la URL:', err);
+      setError('No se pudo analizar la imagen de la URL.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const isOriginallyExternal = !!asset.originalImageUrl || (asset.rawImageUrl?.startsWith('http://') || asset.rawImageUrl?.startsWith('https://') || false);
   const [imageUrl, setImageUrl] = useState(isOriginallyExternal ? '' : (asset.rawImageUrl || ''));
@@ -93,6 +130,12 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
       <CardContent className="p-6">
         {isEditing ? (
           <form onSubmit={handleSave} className="space-y-4">
+            {analyzing && (
+              <div className="p-3 text-sm text-blue-700 bg-blue-50 rounded-md border border-blue-200 flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                <span>Analizando imagen con Gemini IA para autocompletar campos...</span>
+              </div>
+            )}
             <div className="flex items-center justify-between pb-2 border-b">
               <h3 className="font-semibold text-slate-800">Editar Información del Asset</h3>
               <div className="flex gap-2">
@@ -166,6 +209,7 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                   <ImageUploader
                     value={imageUrl}
                     onChange={(url) => setImageUrl(url)}
+                    onImageSelected={handleImageSelected}
                     projectId={asset.project.id}
                     assetId={asset.id}
                   />
@@ -179,14 +223,26 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
 
                 <div className="space-y-2">
                   <Label htmlFor="edit-manualUrl">URL de Imagen Manual (Opcional)</Label>
-                  <Input
-                    id="edit-manualUrl"
-                    type="url"
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    disabled={!!imageUrl}
-                    value={manualUrl}
-                    onChange={(e) => setManualUrl(e.target.value)}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="edit-manualUrl"
+                      type="url"
+                      placeholder="https://ejemplo.com/imagen.jpg"
+                      disabled={!!imageUrl}
+                      value={manualUrl}
+                      onChange={(e) => setManualUrl(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!!imageUrl || !manualUrl || analyzing}
+                      onClick={handleUrlAnalyze}
+                      className="shrink-0 cursor-pointer"
+                    >
+                      {analyzing ? 'Analizando...' : 'Autocompletar con IA'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

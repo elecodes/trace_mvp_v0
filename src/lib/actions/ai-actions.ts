@@ -44,3 +44,18 @@ Ensure the category matches one of the specified enum values. Do not write markd
     return null;
   }
 }
+
+export async function analyzeAssetImageUrl(url: string) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch image: ${res.statusText}`);
+    const buffer = Buffer.from(await res.arrayBuffer());
+    let mimeType = res.headers.get('content-type') || 'image/jpeg';
+    mimeType = mimeType.split(';')[0].trim();
+    const base64Data = buffer.toString('base64');
+    return await analyzeAssetImage(base64Data, mimeType);
+  } catch (error) {
+    console.error('Error al analizar URL de imagen con Gemini:', error);
+    return null;
+  }
+}

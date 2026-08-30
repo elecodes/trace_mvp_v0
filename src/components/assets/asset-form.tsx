@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { ImageUploader } from '@/components/assets/image-uploader';
 import { Loader2 } from 'lucide-react';
 import { AssetCategory } from '@prisma/client';
-import { analyzeAssetImage } from '@/lib/actions/ai-actions';
+import { analyzeAssetImage, analyzeAssetImageUrl } from '@/lib/actions/ai-actions';
 
 const assetSchema = z.object({
   title: z.string().min(2, 'El título debe tener al menos 2 caracteres'),
@@ -52,6 +52,8 @@ export function AssetForm({ projects }: AssetFormProps) {
     }
   };
 
+
+
   const {
     register,
     handleSubmit,
@@ -71,7 +73,29 @@ export function AssetForm({ projects }: AssetFormProps) {
   });
 
   const imageUrl = watch('imageUrl');
+  const manualUrl = watch('manualUrl');
   const projectId = watch('projectId');
+
+  const handleUrlAnalyze = async () => {
+    if (!manualUrl || (!manualUrl.startsWith('http://') && !manualUrl.startsWith('https://'))) {
+      setError('Por favor ingresa una URL válida');
+      return;
+    }
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const data = await analyzeAssetImageUrl(manualUrl);
+      if (data) {
+        if (data.description) setValue('description', data.description);
+        if (data.category) setValue('category', data.category as AssetCategory);
+      }
+    } catch (err) {
+      console.error('Error al analizar la URL:', err);
+      setError('No se pudo analizar la imagen de la URL.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const onSubmit = async (data: AssetFormValues) => {
     setLoading(true);
@@ -181,13 +205,25 @@ export function AssetForm({ projects }: AssetFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="manualUrl">URL de Imagen Manual (Opcional)</Label>
-          <Input
-            id="manualUrl"
-            type="url"
-            placeholder="https://ejemplo.com/imagen.jpg"
-            disabled={!!imageUrl}
-            {...register('manualUrl')}
-          />
+          <div className="flex gap-2">
+            <Input
+              id="manualUrl"
+              type="url"
+              placeholder="https://ejemplo.com/imagen.jpg"
+              disabled={!!imageUrl}
+              {...register('manualUrl')}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!!imageUrl || !manualUrl || analyzing}
+              onClick={handleUrlAnalyze}
+              className="shrink-0 cursor-pointer"
+            >
+              {analyzing ? 'Analizando...' : 'Autocompletar con IA'}
+            </Button>
+          </div>
         </div>
       </div>
 
