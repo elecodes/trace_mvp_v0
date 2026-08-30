@@ -34,3 +34,7 @@ Para las siguientes iteraciones del MVP, implementaremos la siguiente arquitectu
    * **Resiliencia:** Si la URL externa original se cae, la aplicación sigue mostrando la imagen desde la caché de Supabase Storage.
    * **Optimización:** Todas las imágenes que se renderizan pasan por el mismo pipeline de compresión y preview seguro (Signed URLs).
    * **Auditoría y Créditos:** El usuario siempre puede ver de dónde provino originalmente la imagen consultando el campo "Origen de Imagen".
+
+## Detalles Adicionales de Implementación
+* **Extracción de Metadatos con IA (Gemini):** Al agregar/editar un asset con una URL externa (ej. Unsplash) o imagen local, se analiza su contenido y/o se raspa la página web para autocompletar e insertar de forma directa los registros de `RightsRecord` (Titular, Licencia, enlace, EXIF de la cámara, fecha y ubicación en las notas) y `SustainabilityRecord` (Material y Peso).
+* **Eliminación en Cascada:** Se implementó la eliminación de Proyectos y Assets desde la interfaz. La eliminación de un proyecto remueve en cascada todos sus assets, eventos y registros asociados gracias a la integridad referencial en Postgres.

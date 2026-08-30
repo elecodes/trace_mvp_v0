@@ -2,6 +2,12 @@
 
 TRACE is a Next.js web application designed to track project asset lifecycles, rights/ownership records, and sustainability metrics (such as carbon footprints and recyclability).
 
+## ✨ Key Features
+
+- **Gemini AI Autocomplete & Scraping**: Instantly parses uploaded local images or external web links (like Unsplash pages) to extract descriptions, categories, materials, and comprehensive ownership metadata (photographer, license details, EXIF camera configuration, and date/location).
+- **Cascade Deletion**: Safely clean up workspace objects; projects and assets can be deleted with simple confirmation dialogs, cleanly cleaning up relational database records.
+- **Project Asset Stepper & History**: Track the transition of props and gear from design, production, and shooting, up to final destination.
+
 ## 🚀 Technology Stack
 
 - **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
