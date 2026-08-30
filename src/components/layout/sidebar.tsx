@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/components/ui/button';
-import { LayoutDashboard, Box, FolderKanban, ShieldCheck, Leaf } from 'lucide-react';
+import { LayoutDashboard, Box, FolderKanban, ShieldCheck, Leaf, FileText } from 'lucide-react';
+import Image from 'next/image';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -17,8 +18,8 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-slate-900 text-slate-100 min-h-screen flex flex-col border-r border-slate-800">
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
-        <div className="h-9 w-9 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center font-bold">
-          <ShieldCheck className="h-6 w-6" />
+        <div className="flex items-center">
+          <Image src="/Trace.png" width={36} height={36} alt="TRACE logo" className="h-6 w-6 mr-2" />
         </div>
         <div>
           <h1 className="font-bold text-lg leading-tight tracking-wider">TRACE</h1>
@@ -74,6 +75,7 @@ export function Sidebar() {
               <Box className={cn('h-5 w-5', pathname.startsWith('/assets') ? 'text-emerald-400' : 'text-slate-400')} />
               Assets / Catálogo
             </Link>
+
           </div>
         </div>
       </nav>

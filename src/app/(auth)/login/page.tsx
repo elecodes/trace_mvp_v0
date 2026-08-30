@@ -19,6 +19,7 @@ export default function LoginPage() {
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
+    // Existing email/password login
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -35,6 +36,33 @@ export default function LoginPage() {
       router.push('/dashboard');
       router.refresh();
     }
+  };
+
+  // Guest login handler
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      setError(error.message);
+    } else {
+      router.push('/dashboard');
+    }
+    setLoading(false);
+  };
+
+  // Demo user login handler
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: 'guest@example.com',
+      password: 'password123',
+    });
+    if (error) {
+      setError(error.message);
+    } else {
+      router.push('/dashboard');
+    }
+    setLoading(false);
   };
 
   return (
@@ -88,6 +116,35 @@ export default function LoginPage() {
                 'Iniciar Sesión'
               )}
             </Button>
+            {/* Anonymous Guest Login */}
+            <Button
+              type="button"
+              className="w-full mt-2"
+              onClick={handleGuestLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Ingresando como invitado...</>
+              ) : (
+                'Ingresar como invitado'
+              )}
+            </Button>
+
+            {/* Demo User Login */}
+            <Button
+              type="button"
+              className="w-full mt-2"
+              onClick={handleDemoLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Ingresando demo... </>
+              ) : (
+                'Login as demo user'
+              )}
+            </Button>
+
+
           </form>
         </CardContent>
         <CardFooter className="flex justify-center border-t p-4 text-sm text-muted-foreground">

@@ -162,6 +162,7 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
+          <Image src="/Trace.png" style={{ width: 50, height: 50, marginRight: 10 }} />
           <View>
             <Text style={styles.title}>TRACE — Reporte de Asset</Text>
             <Text style={styles.subtitle}>
