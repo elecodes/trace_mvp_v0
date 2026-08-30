@@ -25,7 +25,7 @@ Exemplary rules for metadata extraction:
 
 Ensure the category and licenseType match one of the specified enum values. Return only raw JSON.`;
 
-export async function analyzeAssetImage(base64Data: string, mimeType: string, textContext?: string) {
+export async function analyzeAssetImage(base64Data: string, mimeType: string, textContext?: string, originUrl?: string) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn('GEMINI_API_KEY no está configurada.');
@@ -52,8 +52,11 @@ export async function analyzeAssetImage(base64Data: string, mimeType: string, te
     }
 
     let fullPrompt = PROMPT_TEMPLATE;
+    if (originUrl) {
+      fullPrompt = `${fullPrompt}\n\nOrigin URL: ${originUrl}`;
+    }
     if (textContext) {
-      fullPrompt = `${PROMPT_TEMPLATE}\n\nWebpage text context:\n${textContext}`;
+      fullPrompt = `${fullPrompt}\n\nWebpage text context:\n${textContext}`;
     }
 
     promptParts.push(fullPrompt);
@@ -74,7 +77,20 @@ export async function analyzeAssetImageUrl(url: string) {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
     };
-    const res = await fetch(url, { headers });
+
+    let fetchUrl = url;
+    const isUnsplashPage = url.includes('unsplash.com') && !url.includes('images.unsplash.com');
+    if (isUnsplashPage) {
+      const parts = url.split('/');
+      const lastPart = parts[parts.length - 1];
+      const id = lastPart.includes('-') ? lastPart.split('-').pop() : lastPart;
+      if (id) {
+        fetchUrl = `https://unsplash.com/photos/${id}/download`;
+        console.log(`[Unsplash Bot Bypass] Rewrote target URL to download path: ${fetchUrl}`);
+      }
+    }
+
+    const res = await fetch(fetchUrl, { headers });
     if (!res.ok) throw new Error(`Failed to fetch URL: ${res.status} ${res.statusText}`);
 
     const contentType = res.headers.get('content-type') || '';
@@ -114,7 +130,7 @@ export async function analyzeAssetImageUrl(url: string) {
       mimeType = contentType.split(';')[0].trim();
     }
 
-    return await analyzeAssetImage(base64Data, mimeType, cleanHtmlText);
+    return await analyzeAssetImage(base64Data, mimeType, cleanHtmlText, url);
   } catch (error) {
     console.error('Error al analizar URL de imagen con Gemini:', error);
     return null;
