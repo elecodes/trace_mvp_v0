@@ -70,6 +70,7 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<RightsFormValues>({
     resolver: zodResolver(rightsSchema),
@@ -85,6 +86,21 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
   });
 
   const isAiGenerated = watch('isAiGenerated');
+
+  // Sync initialData changes from background processing
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        licenseType: initialData.licenseType,
+        sourceName: initialData.sourceName || '',
+        licenseDocUrl: initialData.licenseDocUrl || '',
+        isAiGenerated: initialData.isAiGenerated,
+        aiToolName: initialData.aiToolName || '',
+        legalStatus: initialData.legalStatus,
+        notes: initialData.notes || '',
+      });
+    }
+  }, [initialData, reset]);
 
   // Clear AI tool name if checkbox is unchecked
   useEffect(() => {

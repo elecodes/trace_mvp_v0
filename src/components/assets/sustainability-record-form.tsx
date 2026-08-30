@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -52,6 +52,7 @@ export function SustainabilityRecordForm({ assetId, initialData }: Sustainabilit
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm<SustainabilityFormValues>({
     resolver: zodResolver(sustainabilitySchema),
@@ -63,6 +64,19 @@ export function SustainabilityRecordForm({ assetId, initialData }: Sustainabilit
       notes: initialData?.notes || '',
     },
   });
+
+  // Sync initialData changes from background processing
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        material: initialData.material || '',
+        weightKg: initialData.weightKg || 0,
+        emissionFactor: initialData.emissionFactor || 0,
+        circularityOutcome: initialData.circularityOutcome,
+        notes: initialData.notes || '',
+      });
+    }
+  }, [initialData, reset]);
 
   const weightKg = watch('weightKg') || 0;
   const emissionFactor = watch('emissionFactor') || 0;
