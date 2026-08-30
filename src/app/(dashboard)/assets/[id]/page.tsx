@@ -1,6 +1,9 @@
 import { getAssetById } from '@/lib/actions/asset-actions';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
+
 import { LifecycleStepper } from '@/components/assets/lifecycle-stepper';
 import { LifecycleHistory } from '@/components/assets/lifecycle-history';
 import { RightsRecordForm } from '@/components/assets/rights-record-form';
