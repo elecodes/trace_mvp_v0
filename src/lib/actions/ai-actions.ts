@@ -2,7 +2,30 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export async function analyzeAssetImage(base64Data: string, mimeType: string) {
+const PROMPT_TEMPLATE = `Analyze the provided information (image and/or webpage text content). 
+Return a JSON object containing information to populate an asset catalog and its rights/license records.
+JSON structure:
+{
+  "category": "TYPOGRAPHY" | "FURNITURE" | "PROPS" | "WARDROBE" | "EQUIPMENT" | "GENERIC",
+  "description": "A short, professional description of the asset (in Spanish, max 150 characters)",
+  "material": "Estimated primary material (e.g. Madera, Metal, Plástico, Vidrio, Textil, Papel/Cartón, Cerámica)",
+  "weightKg": number | null,
+  "rightsRecord": {
+    "licenseType": "ORIGINAL" | "STOCK_LICENSED" | "AI_GENERATED" | "PUBLIC_DOMAIN" | "UNKNOWN",
+    "sourceName": "Name of photographer/author and platform (e.g. 'John Doe en Unsplash')",
+    "licenseDocUrl": "Document URL or license URL (e.g. 'https://unsplash.com/es/licencia')",
+    "notes": "Additional metadata like camera, lens, date published, and location (in Spanish, max 200 characters)"
+  }
+}
+
+Exemplary rules for metadata extraction from webpage content:
+- If it's an Unsplash page, set "licenseType" to "STOCK_LICENSED", "licenseDocUrl" to "https://unsplash.com/es/licencia" or similar.
+- Extract photographer's name and platform for "sourceName".
+- Gather camera info (e.g., Canon EOS R5), publication date, and location to put into rightsRecord "notes".
+
+Ensure the category and licenseType match one of the specified enum values. Return only raw JSON.`;
+
+export async function analyzeAssetImage(base64Data: string, mimeType: string, textContext?: string) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn('GEMINI_API_KEY no está configurada.');
@@ -18,25 +41,24 @@ export async function analyzeAssetImage(base64Data: string, mimeType: string) {
       },
     });
 
-    const prompt = `Analyze this image of an asset/object. Return a JSON object with the following fields:
-{
-  "category": "TYPOGRAPHY" | "FURNITURE" | "PROPS" | "WARDROBE" | "EQUIPMENT" | "GENERIC",
-  "description": "A short, professional description of the asset (in Spanish, max 150 characters)",
-  "material": "Estimated primary material (e.g. Madera, Metal, Plástico, Vidrio, Textil, Papel/Cartón, Cerámica)",
-  "weightKg": number | null
-}
-Ensure the category matches one of the specified enum values. Do not write markdown tags, return only the raw JSON.`;
-
-    const result = await model.generateContent([
-      {
+    const promptParts: any[] = [];
+    if (base64Data) {
+      promptParts.push({
         inlineData: {
           data: base64Data,
           mimeType: mimeType,
         },
-      },
-      prompt,
-    ]);
+      });
+    }
 
+    let fullPrompt = PROMPT_TEMPLATE;
+    if (textContext) {
+      fullPrompt = `${PROMPT_TEMPLATE}\n\nWebpage text context:\n${textContext}`;
+    }
+
+    promptParts.push(fullPrompt);
+
+    const result = await model.generateContent(promptParts);
     const text = result.response.text();
     return JSON.parse(text.trim());
   } catch (error) {
@@ -47,13 +69,48 @@ Ensure the category matches one of the specified enum values. Do not write markd
 
 export async function analyzeAssetImageUrl(url: string) {
   try {
+    console.log('Gemini analyzing URL:', url);
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch image: ${res.statusText}`);
-    const buffer = Buffer.from(await res.arrayBuffer());
-    let mimeType = res.headers.get('content-type') || 'image/jpeg';
-    mimeType = mimeType.split(';')[0].trim();
-    const base64Data = buffer.toString('base64');
-    return await analyzeAssetImage(base64Data, mimeType);
+    if (!res.ok) throw new Error(`Failed to fetch URL: ${res.statusText}`);
+
+    const contentType = res.headers.get('content-type') || '';
+    let base64Data = '';
+    let mimeType = 'image/jpeg';
+    let cleanHtmlText = '';
+
+    if (contentType.includes('text/html')) {
+      const html = await res.text();
+      const ogImageRegex = /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i;
+      const ogImageMatch = html.match(ogImageRegex);
+      
+      cleanHtmlText = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 15000);
+      
+      if (ogImageMatch && ogImageMatch[1]) {
+        const directImageUrl = ogImageMatch[1];
+        try {
+          const imgRes = await fetch(directImageUrl);
+          if (imgRes.ok) {
+            const buffer = Buffer.from(await imgRes.arrayBuffer());
+            base64Data = buffer.toString('base64');
+            mimeType = (imgRes.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+          }
+        } catch (e) {
+          console.error('Failed to fetch og:image in url analyzer:', e);
+        }
+      }
+    } else {
+      const buffer = Buffer.from(await res.arrayBuffer());
+      base64Data = buffer.toString('base64');
+      mimeType = contentType.split(';')[0].trim();
+    }
+
+    return await analyzeAssetImage(base64Data, mimeType, cleanHtmlText);
   } catch (error) {
     console.error('Error al analizar URL de imagen con Gemini:', error);
     return null;
