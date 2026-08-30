@@ -35,7 +35,7 @@ export async function analyzeAssetImage(base64Data: string, mimeType: string, te
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
+      model: 'gemini-flash-lite-latest',
       generationConfig: {
         responseMimeType: 'application/json',
       },
