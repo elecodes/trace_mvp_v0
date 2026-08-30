@@ -112,6 +112,23 @@ export async function updateProject(id: string, rawData: unknown) {
   return updatedProject;
 }
 
+export async function deleteProject(id: string) {
+  const userId = await getAuthUserId();
+  const project = await prisma.project.findUnique({ where: { id } });
+
+  if (!project || project.userId !== userId) {
+    throw new Error('Proyecto no encontrado o no autorizado');
+  }
+
+  await prisma.project.delete({
+    where: { id }
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath('/projects');
+  return { success: true };
+}
+
 export async function getProjectPdfData(projectId: string) {
   const userId = await getAuthUserId();
   const project = await prisma.project.findUnique({

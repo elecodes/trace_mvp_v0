@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { updateAsset } from '@/lib/actions/asset-actions';
+import { updateAsset, deleteAsset } from '@/lib/actions/asset-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { FolderKanban, Calendar, Edit2, Loader2, Save, X, Copy, Check, Sparkles } from 'lucide-react';
+import { FolderKanban, Calendar, Edit2, Loader2, Save, X, Copy, Check, Sparkles, Trash2 } from 'lucide-react';
 import { ImageUploader } from '@/components/assets/image-uploader';
 import { analyzeAssetImage, analyzeAssetImageUrl } from '@/lib/actions/ai-actions';
 
@@ -53,6 +53,7 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [description, setDescription] = useState(asset.description || '');
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [extractedMetadata, setExtractedMetadata] = useState<any>(null);
@@ -102,6 +103,21 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const externalUrl = asset.originalImageUrl || (asset.rawImageUrl?.startsWith('http://') || asset.rawImageUrl?.startsWith('https://') ? asset.rawImageUrl : null);
   const displayUrl = externalUrl || 'Imagen almacenada en TRACE';
   const isExternalUrl = !!externalUrl;
+
+  const handleDelete = async () => {
+    if (!confirm('¿Estás seguro de que querés eliminar este asset? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteAsset(asset.id);
+      router.push(`/projects/${asset.project.id}`);
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar el asset');
+      setDeleting(false);
+    }
+  };
 
   const handleCopy = () => {
     if (!externalUrl) return;
@@ -328,14 +344,25 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                     <FolderKanban className="h-3.5 w-3.5 text-slate-400" /> {asset.project.name}
                   </span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                  className="gap-1 h-8 text-xs cursor-pointer"
-                >
-                  <Edit2 className="h-3.5 w-3.5" /> Editar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    className="gap-1 h-8 text-xs cursor-pointer"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" /> Editar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="gap-1 h-8 text-xs cursor-pointer bg-red-600 hover:bg-red-700 text-white border-none flex items-center"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> {deleting ? 'Eliminando...' : 'Eliminar'}
+                  </Button>
+                </div>
               </div>
 
               <h1 className="text-2xl font-bold text-slate-900">{asset.title}</h1>

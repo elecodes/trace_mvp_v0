@@ -419,6 +419,27 @@ export async function updateAsset(
   return updatedAsset;
 }
 
+export async function deleteAsset(assetId: string) {
+  const user = await getAuthUser();
+  const currentAsset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    include: { project: true }
+  });
+
+  if (!currentAsset || currentAsset.project.userId !== user.id) {
+    throw new Error('Asset no encontrado o no autorizado');
+  }
+
+  await prisma.asset.delete({
+    where: { id: assetId }
+  });
+
+  revalidatePath(`/projects/${currentAsset.projectId}`);
+  revalidatePath('/assets');
+  revalidatePath('/dashboard');
+  return { success: true };
+}
+
 
 export async function updateAssetStatus(
   assetId: string,

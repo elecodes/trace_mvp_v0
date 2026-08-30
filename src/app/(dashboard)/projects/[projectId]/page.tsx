@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, ArrowLeft, ArrowUpRight, FolderKanban } from 'lucide-react';
 import { ProjectPdfDownloadButton } from '@/components/pdf/project-pdf-download-button';
+import { DeleteProjectButton } from '@/components/projects/delete-project-button';
 
 const STAGE_VARIANTS: Record<string, 'info' | 'warning' | 'success' | 'secondary'> = {
   DESIGN: 'info',
@@ -56,6 +57,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </Link>
         <div className="flex items-center gap-3">
           <ProjectPdfDownloadButton project={pdfProjectData} />
+          <DeleteProjectButton projectId={project.id} />
           <Link href={`/projects/${project.id}/assets/new`}>
             <Button className="bg-emerald-600 hover:bg-emerald-700 font-semibold gap-2 cursor-pointer">
               <Plus className="h-4 w-4" /> Nuevo Asset
