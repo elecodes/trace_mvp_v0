@@ -4,9 +4,10 @@ TRACE is a Next.js web application designed to track project asset lifecycles, r
 
 ## ✨ Key Features
 
-- **Gemini AI Autocomplete & Scraping**: Instantly parses uploaded local images or external web links (like Unsplash pages) to extract descriptions, categories, materials, and comprehensive ownership metadata (photographer, license details, EXIF camera configuration, and date/location).
+- **Gemini AI Autocomplete & Scraping**: Instantly parses uploaded local images or external web links (like Unsplash pages) to extract descriptions, categories, materials, and comprehensive ownership metadata (photographer, license details, EXIF camera configuration, and date/location) using `gemini-flash-lite-latest` to avoid quota limits and bypass Unsplash bot challenges.
 - **Cascade Deletion**: Safely clean up workspace objects; projects and assets can be deleted with simple confirmation dialogs, cleanly cleaning up relational database records.
 - **Project Asset Stepper & History**: Track the transition of props and gear from design, production, and shooting, up to final destination.
+- **Sets, Shooting Records & Team Roles**: Plan shooting sets, log whether assets are camera-visible, and delegate access to producers, art directors, or legal reps.
 
 ## 🚀 Technology Stack
 
@@ -51,7 +52,10 @@ The database uses PostgreSQL via Prisma with the following core entities:
 
 - **User**: System user linked to Supabase Auth.
 - **Project**: Represents a group of assets owned by a user.
+- **ProjectMember**: Represents workspace access permissions for teams (`PRODUCER`, `ART`, `LEGAL`).
 - **Asset**: The central entity representing a tracked physical or digital item. Has a `LifecycleStage` (`DESIGN`, `PRODUCTION`, `SHOOTING`, `FINAL_DESTINATION`).
+- **Set**: Represents filming sets/locations associated with a project.
+- **ShootingRecord**: Tracks whether an asset has been used in shooting, if it was visible on camera, and related notes.
 - **LifecycleEvent**: Tracks history of lifecycle stage transitions for auditability.
 - **RightsRecord**: License type (`ORIGINAL`, `STOCK_LICENSED`, `AI_GENERATED`, `PUBLIC_DOMAIN`, `UNKNOWN`), source, legal status, and AI tool logs associated with an asset.
 - **SustainabilityRecord**: Material type, weight, emission factors, dynamic CO₂eq calculations, circularity outcome (`PENDING`, `REUSED`, `DONATED`, `RECYCLED`, `DISCARDED`), and notes.
@@ -89,7 +93,7 @@ Fill in the credentials from your Supabase project and Gemini API:
 - `DIRECT_URL`: Direct database connection URL (port 5432)
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase Project API URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase Anon Public Key
-- `GEMINI_API_KEY`: API Key from Google AI Studio (uses `gemini-2.5-flash` model for asset description and category analysis)
+- `GEMINI_API_KEY`: API Key from Google AI Studio (uses `gemini-flash-lite-latest` model for asset description and category analysis)
 
 ### 4. Supabase Storage Configuration
 1. Go to your Supabase Dashboard ➔ **Storage**.
