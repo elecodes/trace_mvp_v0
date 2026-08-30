@@ -4,7 +4,10 @@
 Aceptado e Implementado (Agosto 2026)
 
 ## Contexto
-En TRACE MVP v0, los assets necesitan vincularse a imágenes que pueden provenir de dos fuentes diferentes:
+En TRACE MVP v0, los assets necesitan vinculars
+## UI Update
+- Added TRACE logo to sidebar and removed green background.
+rentes:
 1. **Archivos Locales:** Subidos directamente por el usuario desde su dispositivo hacia el almacenamiento privado de Supabase Storage (`asset-images`).
 2. **Enlaces Externos (URLs Originales):** Copiados directamente desde internet (ej. repositorios de imágenes, bibliotecas de assets externos).
 

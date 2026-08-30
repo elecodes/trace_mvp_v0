@@ -17,6 +17,12 @@ TRACE is a Next.js web application designed to track project asset lifecycles, r
 - **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL database, authentication session middleware)
 - **Object Storage**: [Supabase Storage](https://supabase.com/docs/guides/storage) (Private bucket for asset images with signed URL previews)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [lucide-react](https://lucide.dev/)
+
+## 🖼️ UI Updates
+- Added the TRACE logo to the sidebar (via `src/components/layout/sidebar.tsx`).
+- Removed the green background wrapper around the logo for a cleaner appearance.
+
+
 - **State & Forms**: [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/) validation
 - **Visualization**: [Recharts](https://recharts.org/) (for dashboard analytics)
 - **Reports**: [@react-pdf/renderer](https://react-pdf.org/) (for document generation)
