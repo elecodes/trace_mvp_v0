@@ -13,6 +13,9 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ['@react-pdf/renderer'],
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
   },
 };
 
