@@ -18,10 +18,10 @@ JSON structure:
   }
 }
 
-Exemplary rules for metadata extraction from webpage content:
-- If it's an Unsplash page, set "licenseType" to "STOCK_LICENSED", "licenseDocUrl" to "https://unsplash.com/es/licencia" or similar.
-- Extract photographer's name and platform for "sourceName".
-- Gather camera info (e.g., Canon EOS R5), publication date, and location to put into rightsRecord "notes".
+Exemplary rules for metadata extraction:
+- CRITICAL: If the URL or webpage content is from Unsplash (unsplash.com), you MUST set "licenseType" to "STOCK_LICENSED" and "licenseDocUrl" to "https://unsplash.com/es/licencia". Do NOT return "UNKNOWN" or "N/A" for these.
+- Extract photographer's name and platform for "sourceName" (e.g. 'John Doe en Unsplash'). If not found but the site is Unsplash, set to 'Unsplash'.
+- Gather camera info (e.g. Canon EOS R5), publication date, and location to put into rightsRecord "notes".
 
 Ensure the category and licenseType match one of the specified enum values. Return only raw JSON.`;
 
@@ -70,8 +70,12 @@ export async function analyzeAssetImage(base64Data: string, mimeType: string, te
 export async function analyzeAssetImageUrl(url: string) {
   try {
     console.log('Gemini analyzing URL:', url);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch URL: ${res.statusText}`);
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+    };
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`Failed to fetch URL: ${res.status} ${res.statusText}`);
 
     const contentType = res.headers.get('content-type') || '';
     let base64Data = '';

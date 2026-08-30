@@ -10,6 +10,7 @@ import { ProjectPdfDownloadButton } from '@/components/pdf/project-pdf-download-
 import { DeleteProjectButton } from '@/components/projects/delete-project-button';
 import { ProjectSets } from '@/components/projects/project-sets';
 import { ProjectTeam } from '@/components/projects/project-team';
+import { ProjectHeader } from '@/components/projects/project-header';
 
 const STAGE_VARIANTS: Record<string, 'info' | 'warning' | 'success' | 'secondary'> = {
   DESIGN: 'info',
@@ -83,20 +84,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       </div>
 
       {/* Project Info Header */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider">
-            <FolderKanban className="h-4 w-4 text-emerald-600" /> Proyecto Audiovisual
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
-          <p className="text-sm text-slate-500">
-            {project.description || 'Sin descripción ingresada.'}
-          </p>
-        </div>
-        <div className="text-xs text-slate-400">
-          Registrado el {new Date(project.createdAt).toLocaleDateString('es-AR')}
-        </div>
-      </div>
+      <ProjectHeader project={project} />
 
       {/* Metrics Banner */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

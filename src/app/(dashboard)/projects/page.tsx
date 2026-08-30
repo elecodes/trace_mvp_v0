@@ -1,18 +1,26 @@
 import { getProjects } from '@/lib/actions/asset-actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FolderKanban, Calendar, ArrowRight } from 'lucide-react';
+import { FolderKanban, Calendar, ArrowRight, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default async function ProjectsPage() {
   const projects = await getProjects();
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Proyectos</h1>
-        <p className="text-sm text-slate-500">
-          Organización de assets por proyecto o categoría de negocio.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Proyectos</h1>
+          <p className="text-sm text-slate-500">
+            Organización de assets por proyecto o categoría de negocio.
+          </p>
+        </div>
+        <Link href="/projects/new">
+          <Button className="bg-emerald-600 hover:bg-emerald-700 font-semibold gap-2 shadow-sm cursor-pointer text-white">
+            <Plus className="h-4 w-4" /> Nuevo Proyecto
+          </Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
