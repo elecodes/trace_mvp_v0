@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { FolderKanban, Calendar, Edit2, Loader2, Save, X, Copy, Check } from 'lucide-react';
+import { FolderKanban, Calendar, Edit2, Loader2, Save, X, Copy, Check, Sparkles } from 'lucide-react';
 import { ImageUploader } from '@/components/assets/image-uploader';
 import { analyzeAssetImage, analyzeAssetImageUrl } from '@/lib/actions/ai-actions';
 
@@ -45,6 +45,7 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [extractedMetadata, setExtractedMetadata] = useState<any>(null);
   const router = useRouter();
 
   const handleImageSelected = async (base64: string, mimeType: string) => {
@@ -52,8 +53,9 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
     setError(null);
     try {
       const data = await analyzeAssetImage(base64, mimeType);
-      if (data && data.description) {
-        setDescription(data.description);
+      if (data) {
+        if (data.description) setDescription(data.description);
+        setExtractedMetadata(data);
       }
     } catch (err) {
       console.error('Error al analizar la imagen:', err);
@@ -71,8 +73,9 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
     setError(null);
     try {
       const data = await analyzeAssetImageUrl(manualUrl);
-      if (data && data.description) {
-        setDescription(data.description);
+      if (data) {
+        if (data.description) setDescription(data.description);
+        setExtractedMetadata(data);
       }
     } catch (err) {
       console.error('Error al analizar la URL:', err);
@@ -115,6 +118,16 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
         title,
         description: description || undefined,
         imageUrl: finalImageUrl,
+        rightsRecord: extractedMetadata?.rightsRecord ? {
+          licenseType: extractedMetadata.rightsRecord.licenseType,
+          sourceName: extractedMetadata.rightsRecord.sourceName,
+          licenseDocUrl: extractedMetadata.rightsRecord.licenseDocUrl,
+          notes: extractedMetadata.rightsRecord.notes,
+        } : undefined,
+        sustainabilityRecord: (extractedMetadata?.material || extractedMetadata?.weightKg) ? {
+          material: extractedMetadata.material,
+          weightKg: extractedMetadata.weightKg || undefined,
+        } : undefined,
       });
       setIsEditing(false);
       router.refresh();
@@ -244,6 +257,23 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                     </Button>
                   </div>
                 </div>
+
+                {extractedMetadata && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2 text-xs animate-in fade-in duration-200">
+                    <h4 className="font-semibold text-slate-700 flex items-center gap-1.5 border-b pb-1 mb-2">
+                      <Sparkles className="h-4 w-4 text-emerald-600 animate-pulse" /> 
+                      Metadatos e Información de Derechos Extraídos por IA
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-slate-600">
+                      <div><strong>Titular / Origen:</strong> {extractedMetadata.rightsRecord?.sourceName || 'N/A'}</div>
+                      <div><strong>Tipo de Licencia:</strong> {extractedMetadata.rightsRecord?.licenseType || 'N/A'}</div>
+                      <div className="col-span-1 md:col-span-2"><strong>Enlace de Licencia:</strong> {extractedMetadata.rightsRecord?.licenseDocUrl || 'N/A'}</div>
+                      <div className="col-span-1 md:col-span-2"><strong>Detalles Contractuales (EXIF / Ubicación):</strong> {extractedMetadata.rightsRecord?.notes || 'N/A'}</div>
+                      {extractedMetadata.material && <div><strong>Material Estimado:</strong> {extractedMetadata.material}</div>}
+                      {extractedMetadata.weightKg !== undefined && extractedMetadata.weightKg !== null && <div><strong>Peso Estimado:</strong> {extractedMetadata.weightKg} kg</div>}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </form>

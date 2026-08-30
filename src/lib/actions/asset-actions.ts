@@ -255,6 +255,16 @@ export async function createAsset(data: {
   imageUrl?: string;
   projectId: string;
   category?: AssetCategory;
+  rightsRecord?: {
+    licenseType: any;
+    sourceName?: string;
+    licenseDocUrl?: string;
+    notes?: string;
+  };
+  sustainabilityRecord?: {
+    material?: string;
+    weightKg?: number;
+  };
 }) {
   const user = await getAuthUser();
 
@@ -287,6 +297,21 @@ export async function createAsset(data: {
           notes: 'Asset creado en fase de Diseño.',
         },
       },
+      rightsRecord: data.rightsRecord ? {
+        create: {
+          licenseType: data.rightsRecord.licenseType || 'UNKNOWN',
+          sourceName: data.rightsRecord.sourceName || null,
+          licenseDocUrl: data.rightsRecord.licenseDocUrl || null,
+          notes: data.rightsRecord.notes || null,
+        }
+      } : undefined,
+      sustainabilityRecord: (data.sustainabilityRecord?.material || data.sustainabilityRecord?.weightKg) ? {
+        create: {
+          material: data.sustainabilityRecord.material || null,
+          weightKg: data.sustainabilityRecord.weightKg || null,
+          circularityOutcome: 'PENDING',
+        }
+      } : undefined,
     },
   });
 
@@ -307,6 +332,16 @@ export async function updateAsset(
     title: string;
     description?: string;
     imageUrl?: string;
+    rightsRecord?: {
+      licenseType: any;
+      sourceName?: string;
+      licenseDocUrl?: string;
+      notes?: string;
+    };
+    sustainabilityRecord?: {
+      material?: string;
+      weightKg?: number;
+    };
   }
 ) {
   const user = await getAuthUser();
@@ -337,6 +372,40 @@ export async function updateAsset(
       originalImageUrl: originalImageUrlUpdate !== undefined ? (originalImageUrlUpdate || null) : currentAsset.originalImageUrl,
     },
   });
+
+  if (data.rightsRecord) {
+    await prisma.rightsRecord.upsert({
+      where: { assetId },
+      update: {
+        licenseType: data.rightsRecord.licenseType || 'UNKNOWN',
+        sourceName: data.rightsRecord.sourceName || null,
+        licenseDocUrl: data.rightsRecord.licenseDocUrl || null,
+        notes: data.rightsRecord.notes || null,
+      },
+      create: {
+        assetId,
+        licenseType: data.rightsRecord.licenseType || 'UNKNOWN',
+        sourceName: data.rightsRecord.sourceName || null,
+        licenseDocUrl: data.rightsRecord.licenseDocUrl || null,
+        notes: data.rightsRecord.notes || null,
+      }
+    });
+  }
+
+  if (data.sustainabilityRecord) {
+    await prisma.sustainabilityRecord.upsert({
+      where: { assetId },
+      update: {
+        material: data.sustainabilityRecord.material || null,
+        weightKg: data.sustainabilityRecord.weightKg || null,
+      },
+      create: {
+        assetId,
+        material: data.sustainabilityRecord.material || null,
+        weightKg: data.sustainabilityRecord.weightKg || null,
+      }
+    });
+  }
 
   if (data.imageUrl !== undefined && isExternal) {
     // Process and cache the external image asynchronously in the background
