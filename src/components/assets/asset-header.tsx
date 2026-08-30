@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { FolderKanban, Calendar, Edit2, Loader2, Save, X, Copy, Check } from 'lucide-react';
+import { ImageUploader } from '@/components/assets/image-uploader';
 
 interface AssetHeaderProps {
   asset: {
@@ -44,6 +45,10 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [copied, setCopied] = useState(false);
   const router = useRouter();
 
+  const isOriginallyExternal = !!asset.originalImageUrl || (asset.rawImageUrl?.startsWith('http://') || asset.rawImageUrl?.startsWith('https://') || false);
+  const [imageUrl, setImageUrl] = useState(isOriginallyExternal ? '' : (asset.rawImageUrl || ''));
+  const [manualUrl, setManualUrl] = useState(isOriginallyExternal ? (asset.originalImageUrl || asset.rawImageUrl || '') : '');
+
   const externalUrl = asset.originalImageUrl || (asset.rawImageUrl?.startsWith('http://') || asset.rawImageUrl?.startsWith('https://') ? asset.rawImageUrl : null);
   const displayUrl = externalUrl || 'Imagen almacenada en TRACE';
   const isExternalUrl = !!externalUrl;
@@ -66,10 +71,13 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
       return;
     }
 
+    const finalImageUrl = imageUrl || manualUrl || '';
+
     try {
       await updateAsset(asset.id, {
         title,
         description: description || undefined,
+        imageUrl: finalImageUrl,
       });
       setIsEditing(false);
       router.refresh();
@@ -96,6 +104,8 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                     setIsEditing(false);
                     setTitle(asset.title);
                     setDescription(asset.description || '');
+                    setImageUrl(isOriginallyExternal ? '' : (asset.rawImageUrl || ''));
+                    setManualUrl(isOriginallyExternal ? (asset.originalImageUrl || asset.rawImageUrl || '') : '');
                     setError(null);
                   }}
                   disabled={loading}
@@ -143,6 +153,41 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
+              </div>
+
+              <div className="space-y-4 border-t pt-4">
+                <div>
+                  <Label className="text-sm font-semibold">Fotografía del Asset</Label>
+                  <p className="text-xs text-slate-500 mb-2">Sube una nueva imagen o proporciona una URL manual.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Subir Imagen (Compresión automática)</Label>
+                  <ImageUploader
+                    value={imageUrl}
+                    onChange={(url) => setImageUrl(url)}
+                    projectId={asset.project.id}
+                    assetId={asset.id}
+                  />
+                </div>
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink mx-4 text-slate-400 text-xs font-semibold uppercase">O</span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-manualUrl">URL de Imagen Manual (Opcional)</Label>
+                  <Input
+                    id="edit-manualUrl"
+                    type="url"
+                    placeholder="https://ejemplo.com/imagen.jpg"
+                    disabled={!!imageUrl}
+                    value={manualUrl}
+                    onChange={(e) => setManualUrl(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </form>

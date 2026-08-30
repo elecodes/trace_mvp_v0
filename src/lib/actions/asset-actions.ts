@@ -259,8 +259,8 @@ export async function updateAsset(
     data: {
       title: data.title,
       description: data.description || null,
-      imageUrl: data.imageUrl !== undefined ? data.imageUrl : currentAsset.imageUrl,
-      originalImageUrl: originalImageUrlUpdate !== undefined ? originalImageUrlUpdate : currentAsset.originalImageUrl,
+      imageUrl: data.imageUrl !== undefined ? (data.imageUrl || null) : currentAsset.imageUrl,
+      originalImageUrl: originalImageUrlUpdate !== undefined ? (originalImageUrlUpdate || null) : currentAsset.originalImageUrl,
     },
   });
 
