@@ -24,6 +24,16 @@ interface AssetHeaderProps {
     category?: string;
     createdAt: Date | string;
     project: { id: string; name: string };
+    rightsRecord?: {
+      licenseType: string;
+      sourceName?: string | null;
+      licenseDocUrl?: string | null;
+      notes?: string | null;
+    } | null;
+    sustainabilityRecord?: {
+      material?: string | null;
+      weightKg?: number | null;
+    } | null;
   };
   stageLabels: Record<string, string>;
 }
@@ -356,6 +366,34 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                       )}
                     </button>
                   )}
+                </div>
+              )}
+
+              {(asset.rightsRecord || asset.sustainabilityRecord) && (
+                <div className="p-3 bg-slate-50/60 border border-slate-200/60 rounded-lg text-xs space-y-2 max-w-xl">
+                  <div className="font-semibold text-slate-700 flex items-center gap-1.5 border-b border-slate-200 pb-1 mb-1">
+                    <Sparkles className="h-3.5 w-3.5 text-emerald-600 animate-pulse" />
+                    Especificaciones y Derechos
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-slate-600">
+                    {asset.rightsRecord?.sourceName && (
+                      <div><strong>Titular:</strong> {asset.rightsRecord.sourceName}</div>
+                    )}
+                    {asset.rightsRecord?.licenseType && (
+                      <div><strong>Licencia:</strong> {asset.rightsRecord.licenseType}</div>
+                    )}
+                    {asset.sustainabilityRecord?.material && (
+                      <div><strong>Material:</strong> {asset.sustainabilityRecord.material}</div>
+                    )}
+                    {asset.sustainabilityRecord?.weightKg !== undefined && asset.sustainabilityRecord?.weightKg !== null && (
+                      <div><strong>Peso:</strong> {asset.sustainabilityRecord.weightKg} kg</div>
+                    )}
+                    {asset.rightsRecord?.notes && (
+                      <div className="col-span-1 sm:col-span-2 text-slate-500 italic mt-0.5 border-t border-slate-100 pt-1">
+                        <strong>Detalles:</strong> {asset.rightsRecord.notes}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
