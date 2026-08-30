@@ -1,7 +1,7 @@
 # ADR 001: Gestión de Fuentes de Imagen en Assets (Carga local vs Enlace externo)
 
 ## Estado
-Propuesto (Próximos pasos de desarrollo)
+Aceptado e Implementado (Agosto 2026)
 
 ## Contexto
 En TRACE MVP v0, los assets necesitan vincularse a imágenes que pueden provenir de dos fuentes diferentes:

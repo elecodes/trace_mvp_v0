@@ -136,7 +136,11 @@ export function ImageUploader({ value, onChange, onImageSelected, projectId, ass
 
       {preview ? (
         <div className="relative w-full h-48 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 group">
-          <Image src={preview} alt="Asset photo" fill className="object-cover" />
+          {preview.startsWith('http://') || preview.startsWith('https://') ? (
+            <img src={preview} alt="Asset photo" className="object-cover h-full w-full" />
+          ) : (
+            <Image src={preview} alt="Asset photo" fill className="object-cover" />
+          )}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <Button
               type="button"

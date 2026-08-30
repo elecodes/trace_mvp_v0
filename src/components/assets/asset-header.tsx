@@ -17,6 +17,7 @@ interface AssetHeaderProps {
     description: string | null;
     imageUrl: string | null;
     rawImageUrl?: string | null;
+    originalImageUrl?: string | null;
     currentStage: string;
     category?: string;
     createdAt: Date | string;
@@ -43,12 +44,13 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
   const [copied, setCopied] = useState(false);
   const router = useRouter();
 
-  const isExternalUrl = asset.rawImageUrl?.startsWith('http://') || asset.rawImageUrl?.startsWith('https://');
-  const displayUrl = (isExternalUrl ? asset.rawImageUrl : 'Imagen almacenada en TRACE') || '';
+  const externalUrl = asset.originalImageUrl || (asset.rawImageUrl?.startsWith('http://') || asset.rawImageUrl?.startsWith('https://') ? asset.rawImageUrl : null);
+  const displayUrl = externalUrl || 'Imagen almacenada en TRACE';
+  const isExternalUrl = !!externalUrl;
 
   const handleCopy = () => {
-    if (!isExternalUrl || !asset.rawImageUrl) return;
-    navigator.clipboard.writeText(asset.rawImageUrl);
+    if (!externalUrl) return;
+    navigator.clipboard.writeText(externalUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -149,7 +151,11 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
             <div className="relative h-48 w-full md:w-56 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 group">
               {asset.imageUrl ? (
                 <>
-                  <Image src={asset.imageUrl} alt={asset.title} fill className="object-cover" />
+                  {isExternalUrl ? (
+                    <img src={asset.imageUrl} alt={asset.title} className="object-cover h-full w-full" />
+                  ) : (
+                    <Image src={asset.imageUrl} alt={asset.title} fill className="object-cover" />
+                  )}
                   <a
                     href={asset.imageUrl}
                     target="_blank"
@@ -196,7 +202,7 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                 {asset.description || 'Sin descripción ingresada.'}
               </p>
 
-              {asset.rawImageUrl && (
+              {(asset.originalImageUrl || asset.rawImageUrl) && (
                 <div className="flex items-center gap-2 text-xs bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 w-fit max-w-full">
                   <span className="font-semibold text-slate-500 shrink-0">Origen de Imagen:</span>
                   <span className="text-slate-700 truncate select-all max-w-[200px] sm:max-w-[320px] font-mono text-[10px]" title={displayUrl}>

@@ -18,6 +18,7 @@ const assetSchema = z.object({
   title: z.string().min(2, 'El título debe tener al menos 2 caracteres'),
   description: z.string().optional(),
   imageUrl: z.string().optional(),
+  manualUrl: z.string().optional(),
   projectId: z.string().min(1, 'Debes seleccionar un proyecto'),
   category: z.nativeEnum(AssetCategory).default(AssetCategory.GENERIC),
 });
@@ -63,6 +64,7 @@ export function AssetForm({ projects }: AssetFormProps) {
       title: '',
       description: '',
       imageUrl: '',
+      manualUrl: '',
       projectId: projects[0]?.id || '',
       category: AssetCategory.GENERIC,
     },
@@ -75,9 +77,12 @@ export function AssetForm({ projects }: AssetFormProps) {
     setLoading(true);
     setError(null);
     try {
+      const { manualUrl, ...rest } = data;
+      const finalImageUrl = rest.imageUrl || manualUrl || undefined;
       const asset = await createAsset({
         id: assetId,
-        ...data,
+        ...rest,
+        imageUrl: finalImageUrl,
       });
       router.push(`/assets/${asset.id}`);
     } catch (err: any) {
@@ -151,15 +156,39 @@ export function AssetForm({ projects }: AssetFormProps) {
         />
       </div>
 
-      <div className="space-y-2">
-        <Label>Fotografía del Asset (Compresión automática)</Label>
-        <ImageUploader
-          value={imageUrl}
-          onChange={(url) => setValue('imageUrl', url, { shouldValidate: true })}
-          onImageSelected={handleImageSelected}
-          projectId={projectId}
-          assetId={assetId}
-        />
+      <div className="space-y-4 border-t pt-4">
+        <div>
+          <Label className="text-sm font-semibold">Fotografía del Asset</Label>
+          <p className="text-xs text-slate-500 mb-2">Sube una imagen o proporciona una URL manual.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Subir Imagen (Compresión automática)</Label>
+          <ImageUploader
+            value={imageUrl}
+            onChange={(url) => setValue('imageUrl', url, { shouldValidate: true })}
+            onImageSelected={handleImageSelected}
+            projectId={projectId}
+            assetId={assetId}
+          />
+        </div>
+
+        <div className="relative flex py-2 items-center">
+          <div className="flex-grow border-t border-slate-200"></div>
+          <span className="flex-shrink mx-4 text-slate-400 text-xs font-semibold uppercase">O</span>
+          <div className="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="manualUrl">URL de Imagen Manual (Opcional)</Label>
+          <Input
+            id="manualUrl"
+            type="url"
+            placeholder="https://ejemplo.com/imagen.jpg"
+            disabled={!!imageUrl}
+            {...register('manualUrl')}
+          />
+        </div>
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">

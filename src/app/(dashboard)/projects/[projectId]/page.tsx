@@ -105,7 +105,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
                 <div>
                   <div className="relative h-44 w-full bg-slate-100 border-b border-slate-200">
                     {asset.imageUrl ? (
-                      <Image src={asset.imageUrl} alt={asset.title} fill className="object-cover" />
+                      (asset.rawImageUrl?.startsWith('http://') || asset.rawImageUrl?.startsWith('https://')) ? (
+                        <img src={asset.imageUrl} alt={asset.title} className="object-cover h-full w-full" />
+                      ) : (
+                        <Image src={asset.imageUrl} alt={asset.title} fill className="object-cover" />
+                      )
                     ) : (
                       <div className="h-full w-full flex items-center justify-center text-slate-300 font-bold text-2xl">
                         TRACE

@@ -76,6 +76,7 @@ model Asset {
   title        String
   description  String?
   imageUrl     String?
+  originalImageUrl String?
   currentStage LifecycleStage @default(DESIGN)
   category     AssetCategory  @default(GENERIC)
 

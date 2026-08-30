@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { LifecycleStage, AssetCategory } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import sharp from 'sharp';
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -116,6 +117,63 @@ export async function getAssetById(id: string) {
   };
 }
 
+export async function processAndCacheExternalImage(
+  assetId: string,
+  externalUrl: string,
+  userId: string,
+  projectId: string
+) {
+  try {
+    console.log(`[Background Image Cache] Fetching image from: ${externalUrl}`);
+    const response = await fetch(externalUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    console.log(`[Background Image Cache] Optimizing image for asset ${assetId}`);
+    const optimizedBuffer = await sharp(buffer)
+      .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    const fileName = `cached-${Date.now()}.webp`;
+    const filePath = `${userId}/${projectId}/${assetId}/${fileName}`;
+
+    console.log(`[Background Image Cache] Uploading to Supabase Storage: ${filePath}`);
+    const supabase = await createClient();
+    const { data, error: uploadError } = await supabase.storage
+      .from('asset-images')
+      .upload(filePath, optimizedBuffer, {
+        contentType: 'image/webp',
+        cacheControl: '3600',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      throw new Error(`Failed to upload optimized image: ${uploadError.message}`);
+    }
+
+    console.log(`[Background Image Cache] Updating asset database record for ${assetId} with: ${data.path}`);
+    await prisma.asset.update({
+      where: { id: assetId },
+      data: {
+        imageUrl: data.path,
+      },
+    });
+
+    revalidatePath(`/assets/${assetId}`);
+    revalidatePath(`/projects/${projectId}`);
+    revalidatePath('/assets');
+    revalidatePath('/dashboard');
+    console.log(`[Background Image Cache] Successfully processed and cached image for asset ${assetId}`);
+  } catch (error) {
+    console.error(`[Background Image Cache] Error caching image for asset ${assetId}:`, error);
+  }
+}
+
 export async function createAsset(data: {
   id?: string;
   title: string;
@@ -135,12 +193,16 @@ export async function createAsset(data: {
     throw new Error('Proyecto no encontrado o no autorizado');
   }
 
+  const isExternal = data.imageUrl?.startsWith('http://') || data.imageUrl?.startsWith('https://');
+  const originalImageUrl = isExternal ? data.imageUrl : null;
+
   const asset = await prisma.asset.create({
     data: {
       id: data.id,
       title: data.title,
       description: data.description || null,
       imageUrl: data.imageUrl || null,
+      originalImageUrl,
       projectId: data.projectId,
       currentStage: LifecycleStage.DESIGN,
       category: data.category || AssetCategory.GENERIC,
@@ -153,6 +215,11 @@ export async function createAsset(data: {
       },
     },
   });
+
+  if (isExternal && data.imageUrl) {
+    // Process and cache the external image asynchronously in the background
+    processAndCacheExternalImage(asset.id, data.imageUrl, user.id, data.projectId);
+  }
 
   revalidatePath(`/projects/${data.projectId}`);
   revalidatePath('/assets');
@@ -180,14 +247,27 @@ export async function updateAsset(
     throw new Error('Asset no encontrado o no autorizado');
   }
 
+  const isExternal = data.imageUrl?.startsWith('http://') || data.imageUrl?.startsWith('https://');
+  
+  let originalImageUrlUpdate: string | null | undefined = undefined;
+  if (data.imageUrl !== undefined) {
+    originalImageUrlUpdate = isExternal ? data.imageUrl : null;
+  }
+
   const updatedAsset = await prisma.asset.update({
     where: { id: assetId },
     data: {
       title: data.title,
       description: data.description || null,
       imageUrl: data.imageUrl !== undefined ? data.imageUrl : currentAsset.imageUrl,
+      originalImageUrl: originalImageUrlUpdate !== undefined ? originalImageUrlUpdate : currentAsset.originalImageUrl,
     },
   });
+
+  if (data.imageUrl !== undefined && isExternal) {
+    // Process and cache the external image asynchronously in the background
+    processAndCacheExternalImage(updatedAsset.id, data.imageUrl, user.id, currentAsset.projectId);
+  }
 
   revalidatePath(`/assets/${assetId}`);
   revalidatePath(`/projects/${currentAsset.projectId}`);
