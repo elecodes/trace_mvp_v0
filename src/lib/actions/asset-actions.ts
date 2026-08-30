@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { LifecycleStage, AssetCategory } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import sharp from 'sharp';
+import { analyzeAssetImageUrl } from '@/lib/actions/ai-actions';
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -125,19 +126,41 @@ export async function processAndCacheExternalImage(
 ) {
   try {
     console.log(`[Background Image Cache] Fetching image from: ${externalUrl}`);
+    
+    // Asynchronously call Gemini to parse metadata from the URL
+    const aiData = await analyzeAssetImageUrl(externalUrl);
+    
     const response = await fetch(externalUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const contentType = response.headers.get('content-type') || '';
+    let optimizedBuffer: Buffer;
 
-    console.log(`[Background Image Cache] Optimizing image for asset ${assetId}`);
-    const optimizedBuffer = await sharp(buffer)
-      .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 80 })
-      .toBuffer();
+    if (contentType.includes('text/html')) {
+      const html = await response.text();
+      const ogImageRegex = /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i;
+      const ogImageMatch = html.match(ogImageRegex);
+      if (ogImageMatch && ogImageMatch[1]) {
+        const imgRes = await fetch(ogImageMatch[1]);
+        if (!imgRes.ok) throw new Error(`Failed to fetch OG image: ${imgRes.statusText}`);
+        const buffer = Buffer.from(await imgRes.arrayBuffer());
+        optimizedBuffer = await sharp(buffer)
+          .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toBuffer();
+      } else {
+        throw new Error('No og:image found on the HTML page');
+      }
+    } else {
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      optimizedBuffer = await sharp(buffer)
+        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+    }
 
     const fileName = `cached-${Date.now()}.webp`;
     const filePath = `${userId}/${projectId}/${assetId}/${fileName}`;
@@ -156,19 +179,70 @@ export async function processAndCacheExternalImage(
       throw new Error(`Failed to upload optimized image: ${uploadError.message}`);
     }
 
+    const currentAsset = await prisma.asset.findUnique({
+      where: { id: assetId }
+    });
+
+    const updateData: any = {
+      imageUrl: data.path,
+    };
+
+    if (aiData) {
+      if (aiData.description && (!currentAsset?.description || currentAsset.description.trim() === '' || currentAsset.description.startsWith('Sin descripción'))) {
+        updateData.description = aiData.description;
+      }
+      if (aiData.category && aiData.category !== 'GENERIC' && (!currentAsset?.category || currentAsset.category === 'GENERIC')) {
+        updateData.category = aiData.category;
+      }
+    }
+
     console.log(`[Background Image Cache] Updating asset database record for ${assetId} with: ${data.path}`);
     await prisma.asset.update({
       where: { id: assetId },
-      data: {
-        imageUrl: data.path,
-      },
+      data: updateData,
     });
+
+    if (aiData?.rightsRecord) {
+      console.log(`[Background Image Cache] Auto-populating RightsRecord for ${assetId}`);
+      await prisma.rightsRecord.upsert({
+        where: { assetId },
+        update: {
+          licenseType: aiData.rightsRecord.licenseType || 'UNKNOWN',
+          sourceName: aiData.rightsRecord.sourceName || null,
+          licenseDocUrl: aiData.rightsRecord.licenseDocUrl || null,
+          notes: aiData.rightsRecord.notes || null,
+        },
+        create: {
+          assetId,
+          licenseType: aiData.rightsRecord.licenseType || 'UNKNOWN',
+          sourceName: aiData.rightsRecord.sourceName || null,
+          licenseDocUrl: aiData.rightsRecord.licenseDocUrl || null,
+          notes: aiData.rightsRecord.notes || null,
+        }
+      });
+    }
+
+    if (aiData?.material || aiData?.weightKg) {
+      console.log(`[Background Image Cache] Auto-populating SustainabilityRecord for ${assetId}`);
+      await prisma.sustainabilityRecord.upsert({
+        where: { assetId },
+        update: {
+          material: aiData.material || null,
+          weightKg: aiData.weightKg || null,
+        },
+        create: {
+          assetId,
+          material: aiData.material || null,
+          weightKg: aiData.weightKg || null,
+        }
+      });
+    }
 
     revalidatePath(`/assets/${assetId}`);
     revalidatePath(`/projects/${projectId}`);
     revalidatePath('/assets');
     revalidatePath('/dashboard');
-    console.log(`[Background Image Cache] Successfully processed and cached image for asset ${assetId}`);
+    console.log(`[Background Image Cache] Successfully processed and cached image + metadata for asset ${assetId}`);
   } catch (error) {
     console.error(`[Background Image Cache] Error caching image for asset ${assetId}:`, error);
   }
