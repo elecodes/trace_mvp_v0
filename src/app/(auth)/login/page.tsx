@@ -151,7 +151,7 @@ export default function LoginPage() {
         <CardFooter className="flex justify-center border-t p-4 text-sm text-muted-foreground">
           ¿No tenés cuenta?{' '}
           <Link href="/register" className="ml-1 text-slate-900 font-semibold hover:underline">
-            Registrate acá
+            Registrate aquí
           </Link>
         </CardFooter>
       </Card>
