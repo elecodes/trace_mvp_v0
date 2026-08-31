@@ -278,6 +278,14 @@ export function ProjectPdfDocument({ project }: ProjectPdfDocumentProps) {
                       <Text style={styles.label}>Descripción:</Text>
                       <Text style={styles.value}>{asset.description || 'Sin descripción'}</Text>
                     </View>
+                    {asset.set && (
+                      <View style={styles.row}>
+                        <Text style={styles.label}>Decorado / Set:</Text>
+                        <Text style={styles.value}>
+                          {asset.set.name} {asset.set.location ? `(${asset.set.location})` : ''}
+                        </Text>
+                      </View>
+                    )}
 
                     {/* Rights Summary */}
                     {asset.rightsRecord ? (

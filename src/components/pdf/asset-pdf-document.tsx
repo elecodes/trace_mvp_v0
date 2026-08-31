@@ -128,6 +128,10 @@ interface AssetPdfProps {
     currentStage: string;
     createdAt: Date;
     project: { name: string };
+    set?: {
+      name: string;
+      location?: string | null;
+    } | null;
     rightsRecord?: {
       licenseType: string;
       sourceName?: string | null;
@@ -190,6 +194,14 @@ export function AssetPdfDocument({ asset }: AssetPdfProps) {
                 <Text style={styles.label}>Fecha de Registro:</Text>
                 <Text style={styles.value}>{formattedDate}</Text>
               </View>
+              {asset.set && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Decorado / Set:</Text>
+                  <Text style={styles.value}>
+                    {asset.set.name} {asset.set.location ? `(${asset.set.location})` : ''}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
