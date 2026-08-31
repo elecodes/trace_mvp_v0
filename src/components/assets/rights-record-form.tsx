@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ShieldCheck, Loader2, CheckCircle2 } from 'lucide-react';
+import { ProjectRole } from '@prisma/client';
 
 const LICENSE_TYPES = [
   { value: 'ORIGINAL', label: 'Original (Derechos propios / Obra original)' },
@@ -57,13 +58,16 @@ interface RightsRecordFormProps {
     legalStatus: 'APPROVED' | 'PENDING' | 'REJECTED';
     notes?: string | null;
   } | null;
+  userRole?: ProjectRole;
 }
 
-export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps) {
+export function RightsRecordForm({ assetId, initialData, userRole }: RightsRecordFormProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const canEdit = userRole === 'PRODUCER' || userRole === 'LEGAL';
 
   const {
     register,
@@ -110,6 +114,7 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
   }, [isAiGenerated, setValue]);
 
   const onSubmit = async (values: RightsFormValues) => {
+    if (!canEdit) return;
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -160,8 +165,9 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
               <Label htmlFor="licenseType">Tipo de Licencia *</Label>
               <select
                 id="licenseType"
+                disabled={loading || !canEdit}
                 {...register('licenseType')}
-                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-85 disabled:cursor-not-allowed"
               >
                 {LICENSE_TYPES.map((lt) => (
                   <option key={lt.value} value={lt.value}>
@@ -179,6 +185,7 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
               <Input
                 id="sourceName"
                 placeholder="Ej: Netflix España, Diseñador X, Getty Images"
+                disabled={loading || !canEdit}
                 {...register('sourceName')}
               />
               {errors.sourceName && (
@@ -194,6 +201,7 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
                 id="licenseDocUrl"
                 type="url"
                 placeholder="https://drive.google.com/..."
+                disabled={loading || !canEdit}
                 {...register('licenseDocUrl')}
               />
               {errors.licenseDocUrl && (
@@ -205,8 +213,9 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
               <Label htmlFor="legalStatus">Estado de Verificación *</Label>
               <select
                 id="legalStatus"
+                disabled={loading || !canEdit}
                 {...register('legalStatus')}
-                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-85 disabled:cursor-not-allowed"
               >
                 {LEGAL_STATUSES.map((ls) => (
                   <option key={ls.value} value={ls.value}>
@@ -225,8 +234,9 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
+                  disabled={loading || !canEdit}
                   {...register('isAiGenerated')}
-                  className="h-4 w-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                  className="h-4 w-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 disabled:cursor-not-allowed"
                 />
                 <span className="text-xs font-semibold text-slate-800">
                   ¿Este asset fue generado total o parcialmente mediante Inteligencia Artificial?
@@ -240,6 +250,7 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
                 <Input
                   id="aiToolName"
                   placeholder="Ej: Midjourney v6, DALL-E 3, Adobe Firefly"
+                  disabled={loading || !canEdit}
                   {...register('aiToolName')}
                 />
                 {errors.aiToolName && (
@@ -255,22 +266,25 @@ export function RightsRecordForm({ assetId, initialData }: RightsRecordFormProps
               id="notes"
               rows={2}
               placeholder="Ej: Válido únicamente para territorio europeo, expiración en emisión original, etc."
+              disabled={loading || !canEdit}
               {...register('notes')}
-              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-85 disabled:cursor-not-allowed"
             />
           </div>
 
-          <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={loading} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...
-                </>
-              ) : (
-                'Guardar Derechos'
-              )}
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={loading} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...
+                  </>
+                ) : (
+                  'Guardar Derechos'
+                )}
+              </Button>
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>

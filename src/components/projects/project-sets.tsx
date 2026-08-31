@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Plus, Trash2, MapPin, Layers } from 'lucide-react';
+import { ProjectRole } from '@prisma/client';
 
 interface SetItem {
   id: string;
@@ -23,9 +24,10 @@ interface SetItem {
 interface ProjectSetsProps {
   projectId: string;
   sets: SetItem[];
+  userRole?: ProjectRole;
 }
 
-export function ProjectSets({ projectId, sets }: ProjectSetsProps) {
+export function ProjectSets({ projectId, sets, userRole }: ProjectSetsProps) {
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
@@ -68,6 +70,8 @@ export function ProjectSets({ projectId, sets }: ProjectSetsProps) {
     }
   };
 
+  const canManage = userRole === 'PRODUCER' || userRole === 'ART';
+
   return (
     <Card className="border-slate-200 shadow-sm bg-white">
       <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
@@ -79,18 +83,20 @@ export function ProjectSets({ projectId, sets }: ProjectSetsProps) {
             Agrupá y ubicá tus elementos en los escenarios de rodaje.
           </CardDescription>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="h-8 text-xs cursor-pointer gap-1"
-        >
-          <Plus className="h-3 w-3" /> {showAddForm ? 'Cancelar' : 'Nuevo'}
-        </Button>
+        {canManage && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="h-8 text-xs cursor-pointer gap-1"
+          >
+            <Plus className="h-3 w-3" /> {showAddForm ? 'Cancelar' : 'Nuevo'}
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Create Set Form */}
-        {showAddForm && (
+        {showAddForm && canManage && (
           <form onSubmit={handleCreateSet} className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-3 animate-in fade-in duration-200">
             {error && <p className="text-[10px] text-red-500">{error}</p>}
             <div className="space-y-2">
@@ -164,12 +170,14 @@ export function ProjectSets({ projectId, sets }: ProjectSetsProps) {
                       <div className="text-[10px] text-slate-400 italic">{set.notes}</div>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleDeleteSet(set.id)}
-                    className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {canManage && (
+                    <button
+                      onClick={() => handleDeleteSet(set.id)}
+                      className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               );
             })

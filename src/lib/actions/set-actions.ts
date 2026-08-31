@@ -1,29 +1,19 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-
-async function getAuthUserId() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error('No estás autenticado');
-  }
-  return user.id;
-}
+import {
+  requireProjectMember,
+  requireSetProjectMember,
+  requireAssetProjectMember,
+  canManageSets
+} from '@/lib/permissions';
 
 export async function createSet(data: { name: string; location?: string | null; notes?: string | null; projectId: string }) {
-  const userId = await getAuthUserId();
-  const project = await prisma.project.findUnique({
-    where: { id: data.projectId }
-  });
+  const { role } = await requireProjectMember(data.projectId);
 
-  if (!project || project.userId !== userId) {
-    throw new Error('Proyecto no encontrado o no autorizado');
+  if (!canManageSets(role)) {
+    throw new Error('No autorizado para gestionar decorados en este proyecto');
   }
 
   const set = await prisma.set.create({
@@ -40,14 +30,10 @@ export async function createSet(data: { name: string; location?: string | null; 
 }
 
 export async function updateSet(id: string, data: { name: string; location?: string | null; notes?: string | null }) {
-  const userId = await getAuthUserId();
-  const set = await prisma.set.findUnique({
-    where: { id },
-    include: { project: true }
-  });
+  const { role, set } = await requireSetProjectMember(id);
 
-  if (!set || set.project.userId !== userId) {
-    throw new Error('Set no encontrado o no autorizado');
+  if (!canManageSets(role)) {
+    throw new Error('No autorizado para gestionar decorados en este proyecto');
   }
 
   const updatedSet = await prisma.set.update({
@@ -64,14 +50,10 @@ export async function updateSet(id: string, data: { name: string; location?: str
 }
 
 export async function deleteSet(id: string) {
-  const userId = await getAuthUserId();
-  const set = await prisma.set.findUnique({
-    where: { id },
-    include: { project: true }
-  });
+  const { role, set } = await requireSetProjectMember(id);
 
-  if (!set || set.project.userId !== userId) {
-    throw new Error('Set no encontrado o no autorizado');
+  if (!canManageSets(role)) {
+    throw new Error('No autorizado para eliminar decorados en este proyecto');
   }
 
   await prisma.set.delete({
@@ -83,14 +65,10 @@ export async function deleteSet(id: string) {
 }
 
 export async function assignAssetToSet(assetId: string, setId: string | null) {
-  const userId = await getAuthUserId();
-  const asset = await prisma.asset.findUnique({
-    where: { id: assetId },
-    include: { project: true }
-  });
+  const { role, asset } = await requireAssetProjectMember(assetId);
 
-  if (!asset || asset.project.userId !== userId) {
-    throw new Error('Asset no encontrado o no autorizado');
+  if (!canManageSets(role)) {
+    throw new Error('No autorizado para asignar decorados');
   }
 
   if (setId) {

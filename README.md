@@ -104,13 +104,17 @@ Fill in the credentials from your Supabase project and Gemini API:
 ### 4. Supabase Storage Configuration
 1. Go to your Supabase Dashboard ➔ **Storage**.
 2. Create a new bucket named **`asset-images`** and check the **Private** option.
-3. Configure RLS Policies for the bucket to allow authenticated reads and writes under their own user folders:
-   ```sql
-   -- Allow users to upload, read, and delete their own files
-   (bucket_id = 'asset-images'::text) AND (auth.role() = 'authenticated'::text) AND ((select auth.uid()::text) = (storage.foldername(name))[1])
-   ```
+3. Configure RLS Policies for the bucket to support collaborative asset viewing:
+   - **Select (Read/Signed URL)**: Allow all authenticated users to read.
+     ```sql
+     (bucket_id = 'asset-images'::text) AND (auth.role() = 'authenticated'::text)
+     ```
+   - **Insert (Upload) & Delete**: Restrict uploads and deletions to the user's folder.
+     ```sql
+     (bucket_id = 'asset-images'::text) AND (auth.role() = 'authenticated'::text) AND ((select auth.uid()::text) = (storage.foldername(name))[1])
+     ```
 
-### 5. Database Setup & Migrations
+### 5. Database Setup, Migrations & Demo Seeding
 
 Deploy the database schema to your Supabase PostgreSQL instance:
 
@@ -122,6 +126,12 @@ Or run development migrations:
 
 ```bash
 npx prisma migrate dev
+```
+
+Seed the demo team member accounts (`art@example.com` and `legal@example.com` with password `password123`) to test role permissions:
+
+```bash
+npx ts-node --compiler-options '{"module":"CommonJS"}' src/scripts/seed-demo-members.ts
 ```
 
 ### 6. Running the Application

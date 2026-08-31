@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Leaf, Loader2, CheckCircle2, Scale, Recycle, CloudDrizzle, Info } from 'lucide-react';
+import { ProjectRole } from '@prisma/client';
 
 const CIRCULARITY_OUTCOMES = [
   { value: 'PENDING', label: 'Pendiente (En uso o sin destino final definido)' },
@@ -40,13 +41,16 @@ interface SustainabilityRecordFormProps {
     circularityOutcome: 'REUSED' | 'DONATED' | 'RECYCLED' | 'DISCARDED' | 'PENDING';
     notes?: string | null;
   } | null;
+  userRole?: ProjectRole;
 }
 
-export function SustainabilityRecordForm({ assetId, initialData }: SustainabilityRecordFormProps) {
+export function SustainabilityRecordForm({ assetId, initialData, userRole }: SustainabilityRecordFormProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const canEdit = userRole === 'PRODUCER' || userRole === 'ART';
 
   const {
     register,
@@ -86,6 +90,7 @@ export function SustainabilityRecordForm({ assetId, initialData }: Sustainabilit
   const estimatedCo2eqKg = Number((weightKg * emissionFactor).toFixed(2));
 
   const onSubmit = async (values: SustainabilityFormValues) => {
+    if (!canEdit) return;
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -162,6 +167,7 @@ export function SustainabilityRecordForm({ assetId, initialData }: Sustainabilit
               <Input
                 id="material"
                 placeholder="Ej: Madera, Plástico, MDF, Acero"
+                disabled={loading || !canEdit}
                 {...register('material')}
               />
               {errors.material && (
@@ -173,7 +179,7 @@ export function SustainabilityRecordForm({ assetId, initialData }: Sustainabilit
               <Label htmlFor="weightKg" className="flex items-center gap-1.5">
                 <Scale className="h-3.5 w-3.5 text-slate-500" /> Peso Total (kg)
               </Label>
-              <Input id="weightKg" type="number" step="0.01" {...register('weightKg')} />
+              <Input id="weightKg" type="number" step="0.01" disabled={loading || !canEdit} {...register('weightKg')} />
               {errors.weightKg && (
                 <p className="text-xs text-red-500">{errors.weightKg.message}</p>
               )}
@@ -188,6 +194,7 @@ export function SustainabilityRecordForm({ assetId, initialData }: Sustainabilit
                 type="number"
                 step="0.001"
                 placeholder="Ej: 1.8"
+                disabled={loading || !canEdit}
                 {...register('emissionFactor')}
               />
               {errors.emissionFactor && (
@@ -203,8 +210,9 @@ export function SustainabilityRecordForm({ assetId, initialData }: Sustainabilit
               </Label>
               <select
                 id="circularityOutcome"
+                disabled={loading || !canEdit}
                 {...register('circularityOutcome')}
-                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-85 disabled:cursor-not-allowed"
               >
                 {CIRCULARITY_OUTCOMES.map((co) => (
                   <option key={co.value} value={co.value}>
@@ -231,22 +239,25 @@ export function SustainabilityRecordForm({ assetId, initialData }: Sustainabilit
               id="notes"
               rows={2}
               placeholder="Ej: Madera FSC, MDF de bajo formaldehído, certificado de reciclaje adjunto..."
+              disabled={loading || !canEdit}
               {...register('notes')}
-              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-85 disabled:cursor-not-allowed"
             />
           </div>
 
-          <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={loading} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...
-                </>
-              ) : (
-                'Guardar Sustentabilidad'
-              )}
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={loading} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...
+                  </>
+                ) : (
+                  'Guardar Sustentabilidad'
+                )}
+              </Button>
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>

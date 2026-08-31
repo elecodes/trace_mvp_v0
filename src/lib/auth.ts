@@ -18,14 +18,30 @@ export async function getOrCreateCurrentUser() {
   });
 
   if (!user) {
-    // Sincronizar: crear el registro en la base de datos de Prisma
-    user = await prisma.user.create({
-      data: {
-        id: supabaseUser.id,
-        email: supabaseUser.email!,
-        name: supabaseUser.user_metadata?.name || null,
-      },
+    // Si no se encuentra por ID, buscar si fue invitado previamente por su email
+    const existingMockUser = await prisma.user.findUnique({
+      where: { email: supabaseUser.email! },
     });
+
+    if (existingMockUser) {
+      // Sincronizar: actualizar el id del usuario mock al id real de Supabase
+      user = await prisma.user.update({
+        where: { email: supabaseUser.email! },
+        data: {
+          id: supabaseUser.id,
+          name: supabaseUser.user_metadata?.name || existingMockUser.name,
+        },
+      });
+    } else {
+      // Crear nuevo registro si no existía invitación previa
+      user = await prisma.user.create({
+        data: {
+          id: supabaseUser.id,
+          email: supabaseUser.email!,
+          name: supabaseUser.user_metadata?.name || null,
+        },
+      });
+    }
   }
 
   return user;

@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FolderKanban, Calendar, Edit2, Loader2, Save, X, Copy, Check, Sparkles, Trash2 } from 'lucide-react';
 import { ImageUploader } from '@/components/assets/image-uploader';
 import { analyzeAssetImage, analyzeAssetImageUrl } from '@/lib/actions/ai-actions';
+import { ProjectRole } from '@prisma/client';
 
 interface AssetHeaderProps {
   asset: {
@@ -42,6 +43,7 @@ interface AssetHeaderProps {
     } | null;
   };
   stageLabels: Record<string, string>;
+  userRole?: ProjectRole;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -53,7 +55,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   EQUIPMENT: 'Equipamiento',
 };
 
-export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
+export function AssetHeader({ asset, stageLabels, userRole }: AssetHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(asset.title);
   const [description, setDescription] = useState(asset.description || '');
@@ -170,10 +172,12 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
     }
   };
 
+  const canEdit = userRole === 'PRODUCER' || userRole === 'ART';
+
   return (
     <Card className="border-slate-200 shadow-sm bg-white overflow-hidden">
       <CardContent className="p-6">
-        {isEditing ? (
+        {isEditing && canEdit ? (
           <form onSubmit={handleSave} className="space-y-4">
             {analyzing && (
               <div className="p-3 text-sm text-blue-700 bg-blue-50 rounded-md border border-blue-200 flex items-center gap-2">
@@ -351,23 +355,27 @@ export function AssetHeader({ asset, stageLabels }: AssetHeaderProps) {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditing(true)}
-                    className="gap-1 h-8 text-xs cursor-pointer"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" /> Editar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="gap-1 h-8 text-xs cursor-pointer bg-red-600 hover:bg-red-700 text-white border-none flex items-center"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" /> {deleting ? 'Eliminando...' : 'Eliminar'}
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                      className="gap-1 h-8 text-xs cursor-pointer"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" /> Editar
+                    </Button>
+                  )}
+                  {canEdit && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="gap-1 h-8 text-xs cursor-pointer bg-red-600 hover:bg-red-700 text-white border-none flex items-center"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> {deleting ? 'Eliminando...' : 'Eliminar'}
+                    </Button>
+                  )}
                 </div>
               </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LifecycleStage } from '@prisma/client';
+import { LifecycleStage, ProjectRole } from '@prisma/client';
 import { updateAssetStatus } from '@/lib/actions/asset-actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 interface LifecycleStepperProps {
   assetId: string;
   currentStage: LifecycleStage;
+  userRole?: ProjectRole;
 }
 
 const STAGES: { key: LifecycleStage; label: string; description: string; stepNumber: number }[] = [
@@ -42,25 +43,30 @@ const STAGES: { key: LifecycleStage; label: string; description: string; stepNum
   },
 ];
 
-export function LifecycleStepper({ assetId, currentStage }: LifecycleStepperProps) {
+export function LifecycleStepper({ assetId, currentStage, userRole }: LifecycleStepperProps) {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState('');
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [targetStage, setTargetStage] = useState<LifecycleStage | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const router = useRouter();
 
   const currentIndex = STAGES.findIndex((s) => s.key === currentStage);
 
+  const canEdit = userRole === 'PRODUCER' || userRole === 'ART';
+
   const handleStageChange = async (newStage: LifecycleStage) => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       await updateAssetStatus(assetId, newStage, notes);
       setShowNotesInput(false);
       setNotes('');
       setTargetStage(null);
       router.refresh();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrorMsg(err.message || 'Error al cambiar la etapa');
     } finally {
       setLoading(false);
     }
@@ -70,6 +76,7 @@ export function LifecycleStepper({ assetId, currentStage }: LifecycleStepperProp
     if (stageKey === currentStage) return;
     setTargetStage(stageKey);
     setShowNotesInput(true);
+    setErrorMsg(null);
   };
 
   return (
@@ -97,15 +104,16 @@ export function LifecycleStepper({ assetId, currentStage }: LifecycleStepperProp
                 key={stage.key}
                 type="button"
                 onClick={() => handleSelectStage(stage.key)}
-                disabled={loading}
+                disabled={loading || !canEdit}
                 className={cn(
-                  'p-4 rounded-xl border text-left transition-all relative flex flex-col justify-between group cursor-pointer',
+                  'p-4 rounded-xl border text-left transition-all relative flex flex-col justify-between group relative flex flex-col justify-between group',
                   isCurrent
                     ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500'
                     : isPassed
                     ? 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100'
                     : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300',
-                  isTarget && 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/30'
+                  isTarget && 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/30',
+                  !canEdit && 'cursor-not-allowed opacity-80'
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -132,6 +140,13 @@ export function LifecycleStepper({ assetId, currentStage }: LifecycleStepperProp
             );
           })}
         </div>
+
+        {/* Error message */}
+        {errorMsg && (
+          <div className="mt-4 p-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded">
+            {errorMsg}
+          </div>
+        )}
 
         {/* Notes input when user selects target transition */}
         {showNotesInput && targetStage && (
@@ -162,6 +177,7 @@ export function LifecycleStepper({ assetId, currentStage }: LifecycleStepperProp
                 onClick={() => {
                   setShowNotesInput(false);
                   setTargetStage(null);
+                  setErrorMsg(null);
                 }}
               >
                 Cancelar

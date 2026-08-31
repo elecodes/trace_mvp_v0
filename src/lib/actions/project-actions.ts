@@ -1,9 +1,15 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import * as z from 'zod';
+import {
+  getAuthUserId,
+  getProjectMemberRole,
+  requireProjectMember,
+  canManageProject
+} from '@/lib/permissions';
+import { signAssetImageUrl } from './asset-actions';
 
 const createProjectSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
@@ -15,22 +21,19 @@ const updateProjectSchema = z.object({
   description: z.string().optional(),
 });
 
-async function getAuthUserId() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error('No estás autenticado');
-  }
-  return user.id;
-}
-
 export async function getUserProjects() {
   const userId = await getAuthUserId();
   return prisma.project.findMany({
-    where: { userId },
+    where: {
+      OR: [
+        { userId },
+        {
+          members: {
+            some: { userId }
+          }
+        }
+      ]
+    },
     include: {
       _count: {
         select: { assets: true },
@@ -40,10 +43,14 @@ export async function getUserProjects() {
   });
 }
 
-import { signAssetImageUrl } from './asset-actions';
-
 export async function getProjectById(id: string) {
   const userId = await getAuthUserId();
+  const role = await getProjectMemberRole(id, userId);
+
+  if (!role) {
+    return null;
+  }
+
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
@@ -71,8 +78,26 @@ export async function getProjectById(id: string) {
     },
   });
 
-  if (!project || project.userId !== userId) {
+  if (!project) {
     return null;
+  }
+
+  // Prepend owner if not already in members
+  const owner = await prisma.user.findUnique({
+    where: { id: project.userId }
+  });
+
+  const memberList = [...project.members];
+  if (owner && !project.members.some(m => m.userId === owner.id)) {
+    memberList.unshift({
+      id: `owner-${owner.id}`,
+      projectId: project.id,
+      userId: owner.id,
+      role: 'PRODUCER',
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      user: owner
+    });
   }
 
   const signedAssets = await Promise.all(
@@ -85,6 +110,8 @@ export async function getProjectById(id: string) {
 
   return {
     ...project,
+    members: memberList,
+    currentUserRole: role,
     assets: signedAssets,
   };
 }
@@ -107,10 +134,8 @@ export async function createProject(rawData: unknown) {
 }
 
 export async function updateProject(id: string, rawData: unknown) {
-  const userId = await getAuthUserId();
-  const project = await prisma.project.findUnique({ where: { id } });
-
-  if (!project || project.userId !== userId) {
+  const { role } = await requireProjectMember(id);
+  if (!canManageProject(role)) {
     throw new Error('No autorizado');
   }
 
@@ -131,10 +156,8 @@ export async function updateProject(id: string, rawData: unknown) {
 }
 
 export async function deleteProject(id: string) {
-  const userId = await getAuthUserId();
-  const project = await prisma.project.findUnique({ where: { id } });
-
-  if (!project || project.userId !== userId) {
+  const { role } = await requireProjectMember(id);
+  if (!canManageProject(role)) {
     throw new Error('Proyecto no encontrado o no autorizado');
   }
 
@@ -148,7 +171,7 @@ export async function deleteProject(id: string) {
 }
 
 export async function getProjectPdfData(projectId: string) {
-  const userId = await getAuthUserId();
+  await requireProjectMember(projectId);
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
@@ -165,7 +188,7 @@ export async function getProjectPdfData(projectId: string) {
     },
   });
 
-  if (!project || project.userId !== userId) {
+  if (!project) {
     throw new Error('Proyecto no encontrado o no autorizado');
   }
 
@@ -184,4 +207,3 @@ export async function getProjectPdfData(projectId: string) {
     })
   );
 }
-

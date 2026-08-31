@@ -6,28 +6,21 @@ import { LifecycleStage, AssetCategory } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import sharp from 'sharp';
 import { analyzeAssetImageUrl } from '@/lib/actions/ai-actions';
+import { getOrCreateCurrentUser } from '@/lib/auth';
+import {
+  getProjectMemberRole,
+  requireProjectMember,
+  requireAssetProjectMember,
+  canManageAssets,
+  canManageRights,
+  canManageSustainability
+} from '@/lib/permissions';
 
 async function getAuthUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const dbUser = await getOrCreateCurrentUser();
+  if (!dbUser) {
     throw new Error('No estás autenticado');
   }
-
-  // Ensure user exists in Prisma database
-  const dbUser = await prisma.user.upsert({
-    where: { id: user.id },
-    update: { email: user.email! },
-    create: {
-      id: user.id,
-      email: user.email!,
-      name: user.user_metadata?.name || user.email?.split('@')[0],
-    },
-  });
-
   return dbUser;
 }
 
@@ -56,7 +49,12 @@ export async function signAssetImageUrl(imageUrl: string | null): Promise<string
 export async function getProjects() {
   const user = await getAuthUser();
   let projects = await prisma.project.findMany({
-    where: { userId: user.id },
+    where: {
+      OR: [
+        { userId: user.id },
+        { members: { some: { userId: user.id } } }
+      ]
+    },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -77,7 +75,14 @@ export async function getProjects() {
 export async function getAssets() {
   const user = await getAuthUser();
   const assets = await prisma.asset.findMany({
-    where: { project: { userId: user.id } },
+    where: {
+      project: {
+        OR: [
+          { userId: user.id },
+          { members: { some: { userId: user.id } } }
+        ]
+      }
+    },
     include: {
       project: true,
       rightsRecord: true,
@@ -98,7 +103,7 @@ export async function getAssets() {
 export async function getAssetById(id: string) {
   const user = await getAuthUser();
   const asset = await prisma.asset.findUnique({
-    where: { id, project: { userId: user.id } },
+    where: { id },
     include: {
       project: {
         include: {
@@ -116,6 +121,11 @@ export async function getAssetById(id: string) {
   });
 
   if (!asset) return null;
+
+  const role = await getProjectMemberRole(asset.projectId, user.id);
+  if (!role) {
+    throw new Error('No autorizado para acceder a este asset');
+  }
 
   return {
     ...asset,
@@ -281,14 +291,10 @@ export async function createAsset(data: {
   };
 }) {
   const user = await getAuthUser();
+  const { role } = await requireProjectMember(data.projectId);
 
-  // Verificar que el proyecto pertenezca al usuario
-  const project = await prisma.project.findUnique({
-    where: { id: data.projectId }
-  });
-
-  if (!project || project.userId !== user.id) {
-    throw new Error('Proyecto no encontrado o no autorizado');
+  if (!canManageAssets(role)) {
+    throw new Error('No autorizado para crear assets en este proyecto');
   }
 
   const isExternal = data.imageUrl?.startsWith('http://') || data.imageUrl?.startsWith('https://');
@@ -359,15 +365,18 @@ export async function updateAsset(
   }
 ) {
   const user = await getAuthUser();
-  
-  // Verificar que el asset pertenezca al usuario a través de su proyecto
+  const { role, projectId } = await requireAssetProjectMember(assetId);
+
+  if (!canManageAssets(role)) {
+    throw new Error('No autorizado para modificar assets en este proyecto');
+  }
+
   const currentAsset = await prisma.asset.findUnique({
-    where: { id: assetId },
-    include: { project: true }
+    where: { id: assetId }
   });
 
-  if (!currentAsset || currentAsset.project.userId !== user.id) {
-    throw new Error('Asset no encontrado o no autorizado');
+  if (!currentAsset) {
+    throw new Error('Asset no encontrado');
   }
 
   const isExternal = data.imageUrl?.startsWith('http://') || data.imageUrl?.startsWith('https://');
@@ -388,89 +397,98 @@ export async function updateAsset(
   });
 
   if (data.rightsRecord) {
-    await prisma.rightsRecord.upsert({
-      where: { assetId },
-      update: {
-        licenseType: data.rightsRecord.licenseType || 'UNKNOWN',
-        sourceName: data.rightsRecord.sourceName || null,
-        licenseDocUrl: data.rightsRecord.licenseDocUrl || null,
-        notes: data.rightsRecord.notes || null,
-      },
-      create: {
-        assetId,
-        licenseType: data.rightsRecord.licenseType || 'UNKNOWN',
-        sourceName: data.rightsRecord.sourceName || null,
-        licenseDocUrl: data.rightsRecord.licenseDocUrl || null,
-        notes: data.rightsRecord.notes || null,
-      }
-    });
+    // Only allow PRODUCER and LEGAL to modify rightsRecord
+    if (canManageRights(role)) {
+      await prisma.rightsRecord.upsert({
+        where: { assetId },
+        update: {
+          licenseType: data.rightsRecord.licenseType || 'UNKNOWN',
+          sourceName: data.rightsRecord.sourceName || null,
+          licenseDocUrl: data.rightsRecord.licenseDocUrl || null,
+          notes: data.rightsRecord.notes || null,
+        },
+        create: {
+          assetId,
+          licenseType: data.rightsRecord.licenseType || 'UNKNOWN',
+          sourceName: data.rightsRecord.sourceName || null,
+          licenseDocUrl: data.rightsRecord.licenseDocUrl || null,
+          notes: data.rightsRecord.notes || null,
+        }
+      });
+    }
   }
 
   if (data.sustainabilityRecord) {
-    await prisma.sustainabilityRecord.upsert({
-      where: { assetId },
-      update: {
-        material: data.sustainabilityRecord.material || null,
-        weightKg: data.sustainabilityRecord.weightKg || null,
-      },
-      create: {
-        assetId,
-        material: data.sustainabilityRecord.material || null,
-        weightKg: data.sustainabilityRecord.weightKg || null,
-      }
-    });
+    // Only allow PRODUCER and ART to modify sustainabilityRecord
+    if (canManageSustainability(role)) {
+      await prisma.sustainabilityRecord.upsert({
+        where: { assetId },
+        update: {
+          material: data.sustainabilityRecord.material || null,
+          weightKg: data.sustainabilityRecord.weightKg || null,
+        },
+        create: {
+          assetId,
+          material: data.sustainabilityRecord.material || null,
+          weightKg: data.sustainabilityRecord.weightKg || null,
+        }
+      });
+    }
   }
 
   if (data.imageUrl !== undefined && isExternal) {
     // Process and cache the external image asynchronously in the background
-    processAndCacheExternalImage(updatedAsset.id, data.imageUrl, user.id, currentAsset.projectId);
+    processAndCacheExternalImage(updatedAsset.id, data.imageUrl, user.id, projectId);
   }
 
   revalidatePath(`/assets/${assetId}`);
-  revalidatePath(`/projects/${currentAsset.projectId}`);
+  revalidatePath(`/projects/${projectId}`);
   revalidatePath('/assets');
   revalidatePath('/dashboard');
   return updatedAsset;
 }
 
 export async function deleteAsset(assetId: string) {
-  const user = await getAuthUser();
-  const currentAsset = await prisma.asset.findUnique({
-    where: { id: assetId },
-    include: { project: true }
-  });
+  const { role, projectId } = await requireAssetProjectMember(assetId);
 
-  if (!currentAsset || currentAsset.project.userId !== user.id) {
-    throw new Error('Asset no encontrado o no autorizado');
+  if (!canManageAssets(role)) {
+    throw new Error('No autorizado para eliminar assets en este proyecto');
   }
 
   await prisma.asset.delete({
     where: { id: assetId }
   });
 
-  revalidatePath(`/projects/${currentAsset.projectId}`);
+  revalidatePath(`/projects/${projectId}`);
   revalidatePath('/assets');
   revalidatePath('/dashboard');
   return { success: true };
 }
-
 
 export async function updateAssetStatus(
   assetId: string,
   newStage: LifecycleStage,
   notes?: string
 ) {
-  const user = await getAuthUser();
-  const currentAsset = await prisma.asset.findUnique({
-    where: { id: assetId, project: { userId: user.id } },
-  });
+  const { role, asset } = await requireAssetProjectMember(assetId);
 
-  if (!currentAsset) {
-    throw new Error('Asset no encontrado');
+  if (!canManageAssets(role)) {
+    throw new Error('No autorizado para cambiar el ciclo de vida');
   }
 
-  if (currentAsset.currentStage === newStage) {
-    return currentAsset;
+  // Prevent moving to PRODUCTION without approved legal status
+  if (newStage === LifecycleStage.PRODUCTION) {
+    const rightsRecord = await prisma.rightsRecord.findUnique({
+      where: { assetId }
+    });
+    const legalStatus = rightsRecord?.legalStatus ?? 'PENDING';
+    if (legalStatus !== 'APPROVED') {
+      throw new Error('No se puede mover a Producción: el registro de derechos no está aprobado');
+    }
+  }
+
+  if (asset.currentStage === newStage) {
+    return asset;
   }
 
   const updatedAsset = await prisma.asset.update({
@@ -479,7 +497,7 @@ export async function updateAssetStatus(
       currentStage: newStage,
       events: {
         create: {
-          previousStage: currentAsset.currentStage,
+          previousStage: asset.currentStage,
           newStage,
           notes: notes || `Cambio de etapa a ${newStage}`,
         },
@@ -525,9 +543,11 @@ export async function upsertRightsRecord(
   assetId: string,
   data: any
 ) {
-  const user = await getAuthUser();
-  const asset = await prisma.asset.findUnique({ where: { id: assetId, project: { userId: user.id } } });
-  if (!asset) throw new Error('Asset no encontrado');
+  const { role } = await requireAssetProjectMember(assetId);
+
+  if (!canManageRights(role)) {
+    throw new Error('No autorizado para modificar el registro de derechos');
+  }
 
   const licenseType = mapLicenseType(data.licenseType);
   const legalStatus = mapLegalStatus(data.legalStatus);
@@ -565,9 +585,11 @@ export async function upsertSustainabilityRecord(
   assetId: string,
   data: any
 ) {
-  const user = await getAuthUser();
-  const asset = await prisma.asset.findUnique({ where: { id: assetId, project: { userId: user.id } } });
-  if (!asset) throw new Error('Asset no encontrado');
+  const { role } = await requireAssetProjectMember(assetId);
+
+  if (!canManageSustainability(role)) {
+    throw new Error('No autorizado para modificar el registro de sustentabilidad');
+  }
 
   const estimatedCo2eqKg = data.weightKg && data.emissionFactor ? data.weightKg * data.emissionFactor : null;
   const circularityOutcome = mapCircularityOutcome(data.circularityOutcome);
@@ -601,20 +623,28 @@ export async function upsertSustainabilityRecord(
 
 export async function getDashboardMetrics() {
   const user = await getAuthUser();
+  const whereProjectMember = {
+    project: {
+      OR: [
+        { userId: user.id },
+        { members: { some: { userId: user.id } } }
+      ]
+    }
+  };
 
   const totalAssets = await prisma.asset.count({
-    where: { project: { userId: user.id } },
+    where: whereProjectMember,
   });
 
   const assetsWithRights = await prisma.rightsRecord.count({
     where: {
-      asset: { project: { userId: user.id } },
+      asset: whereProjectMember,
     },
   });
 
   const sustainabilityRecords = await prisma.sustainabilityRecord.findMany({
     where: {
-      asset: { project: { userId: user.id } },
+      asset: whereProjectMember,
     },
     select: {
       estimatedCo2eqKg: true,
@@ -631,12 +661,12 @@ export async function getDashboardMetrics() {
 
   const stageCounts = await prisma.asset.groupBy({
     by: ['currentStage'],
-    where: { project: { userId: user.id } },
+    where: whereProjectMember,
     _count: { currentStage: true },
   });
 
   const assetsList = await prisma.asset.findMany({
-    where: { project: { userId: user.id } },
+    where: whereProjectMember,
     include: {
       sustainabilityRecord: true,
       rightsRecord: true,

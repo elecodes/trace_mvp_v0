@@ -1,5 +1,7 @@
 import { getAssetById } from '@/lib/actions/asset-actions';
-import { notFound } from 'next/navigation';
+import { getProjectMemberRole } from '@/lib/permissions';
+import { getOrCreateCurrentUser } from '@/lib/auth';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -25,9 +27,19 @@ interface AssetDetailPageProps {
 }
 
 export default async function AssetDetailPage({ params }: AssetDetailPageProps) {
+  const user = await getOrCreateCurrentUser();
+  if (!user) {
+    redirect('/login');
+  }
+
   const asset = await getAssetById(params.id);
 
   if (!asset) {
+    notFound();
+  }
+
+  const role = await getProjectMemberRole(asset.projectId, user.id);
+  if (!role) {
     notFound();
   }
 
@@ -45,11 +57,11 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
       </div>
 
       {/* Asset Header Card (with Inline Editing) */}
-      <AssetHeader asset={asset} stageLabels={STAGE_LABELS} />
+      <AssetHeader asset={asset} stageLabels={STAGE_LABELS} userRole={role} />
 
       {/* Lifecycle Transition Stepper & Simple History */}
       <div className="space-y-6">
-        <LifecycleStepper assetId={asset.id} currentStage={asset.currentStage} />
+        <LifecycleStepper assetId={asset.id} currentStage={asset.currentStage} userRole={role} />
         <LifecycleHistory events={asset.events} />
       </div>
 
@@ -60,10 +72,11 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
           currentSetId={asset.setId}
           sets={asset.project.sets}
           shootingRecord={asset.shootingRecord}
+          userRole={role}
         />
         <div className="space-y-6">
-          <RightsRecordForm assetId={asset.id} initialData={asset.rightsRecord as any} />
-          <SustainabilityRecordForm assetId={asset.id} initialData={asset.sustainabilityRecord as any} />
+          <RightsRecordForm assetId={asset.id} initialData={asset.rightsRecord as any} userRole={role} />
+          <SustainabilityRecordForm assetId={asset.id} initialData={asset.sustainabilityRecord as any} userRole={role} />
         </div>
       </div>
     </div>

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Film, Layers, CheckCircle2, Loader2, Video, CheckSquare, Square } from 'lucide-react';
+import { cn } from '@/components/ui/button';
+import { ProjectRole } from '@prisma/client';
 
 interface SetItem {
   id: string;
@@ -23,9 +25,10 @@ interface AssetProductionFormProps {
     visibleOnCamera: boolean;
     notes: string | null;
   } | null;
+  userRole?: ProjectRole;
 }
 
-export function AssetProductionForm({ assetId, currentSetId, sets, shootingRecord }: AssetProductionFormProps) {
+export function AssetProductionForm({ assetId, currentSetId, sets, shootingRecord, userRole }: AssetProductionFormProps) {
   const [setId, setSetId] = useState<string>(currentSetId || 'none');
   const [usedInShooting, setUsedInShooting] = useState<boolean>(shootingRecord?.usedInShooting || false);
   const [visibleOnCamera, setVisibleOnCamera] = useState<boolean>(shootingRecord?.visibleOnCamera || false);
@@ -37,7 +40,10 @@ export function AssetProductionForm({ assetId, currentSetId, sets, shootingRecor
   
   const router = useRouter();
 
+  const canEdit = userRole === 'PRODUCER' || userRole === 'ART';
+
   const handleSetChange = async (newSetId: string) => {
+    if (!canEdit) return;
     setSetId(newSetId);
     setSavingSet(true);
     setSuccessMsg(null);
@@ -55,6 +61,7 @@ export function AssetProductionForm({ assetId, currentSetId, sets, shootingRecor
 
   const handleShootingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     setSavingShooting(true);
     setSuccessMsg(null);
     try {
@@ -97,8 +104,8 @@ export function AssetProductionForm({ assetId, currentSetId, sets, shootingRecor
                 id="set-selector"
                 value={setId}
                 onChange={(e) => handleSetChange(e.target.value)}
-                disabled={savingSet}
-                className="flex-1 h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                disabled={savingSet || !canEdit}
+                className="flex-1 h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-80 disabled:cursor-not-allowed"
               >
                 <option value="none">Ninguno (Sin asignar)</option>
                 {sets.map((set) => (
@@ -133,8 +140,11 @@ export function AssetProductionForm({ assetId, currentSetId, sets, shootingRecor
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div
-                onClick={() => setUsedInShooting(!usedInShooting)}
-                className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer select-none transition-colors"
+                onClick={() => canEdit && setUsedInShooting(!usedInShooting)}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer select-none transition-colors",
+                  !canEdit && "cursor-not-allowed opacity-80"
+                )}
               >
                 {usedInShooting ? (
                   <CheckSquare className="h-5 w-5 text-emerald-600" />
@@ -148,8 +158,11 @@ export function AssetProductionForm({ assetId, currentSetId, sets, shootingRecor
               </div>
 
               <div
-                onClick={() => setVisibleOnCamera(!visibleOnCamera)}
-                className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer select-none transition-colors"
+                onClick={() => canEdit && setVisibleOnCamera(!visibleOnCamera)}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer select-none transition-colors",
+                  !canEdit && "cursor-not-allowed opacity-80"
+                )}
               >
                 {visibleOnCamera ? (
                   <Video className="h-5 w-5 text-emerald-600" />
@@ -171,26 +184,29 @@ export function AssetProductionForm({ assetId, currentSetId, sets, shootingRecor
                 placeholder="Ej: Aparece en el fondo del salón, escena 3. Cuidado con el reflejo de focos."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                disabled={!canEdit}
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-80 disabled:cursor-not-allowed"
               />
             </div>
 
-            <div className="flex justify-end pt-2">
-              <Button
-                type="submit"
-                disabled={savingShooting}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-              >
-                {savingShooting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...
-                  </>
-                ) : (
-                  'Guardar Rodaje'
-                )}
-              </Button>
-            </div>
+            {canEdit && (
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  disabled={savingShooting}
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                >
+                  {savingShooting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Guardando...
+                    </>
+                  ) : (
+                    'Guardar Rodaje'
+                  )}
+                </Button>
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>

@@ -1,5 +1,6 @@
 import { getProjectById } from '@/lib/actions/project-actions';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { canManageAssets } from '@/lib/permissions';
 import { ProjectAssetForm } from './project-asset-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Link from 'next/link';
@@ -14,6 +15,11 @@ export default async function NewProjectAssetPage({ params }: NewProjectAssetPag
 
   if (!project) {
     notFound();
+  }
+
+  // Only PRODUCER and ART can create assets
+  if (!project.currentUserRole || !canManageAssets(project.currentUserRole)) {
+    redirect(`/projects/${project.id}`);
   }
 
   return (

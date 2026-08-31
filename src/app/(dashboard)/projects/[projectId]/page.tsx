@@ -62,6 +62,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   const reusableAssets = project.assets.filter(a => a.sustainabilityRecord && a.sustainabilityRecord.circularityOutcome !== 'DISCARDED').length;
   const circularityRate = project.assets.length > 0 ? Math.round((reusableAssets / project.assets.length) * 100) : 0;
 
+  const userRole = project.currentUserRole;
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Top navigation */}
@@ -74,17 +76,19 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </Link>
         <div className="flex items-center gap-3">
           <ProjectPdfDownloadButton project={pdfProjectData} />
-          <DeleteProjectButton projectId={project.id} />
-          <Link href={`/projects/${project.id}/assets/new`}>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 font-semibold gap-2 cursor-pointer text-white">
-              <Plus className="h-4 w-4" /> Nuevo Asset
-            </Button>
-          </Link>
+          {userRole === 'PRODUCER' && <DeleteProjectButton projectId={project.id} />}
+          {(userRole === 'PRODUCER' || userRole === 'ART') && (
+            <Link href={`/projects/${project.id}/assets/new`}>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 font-semibold gap-2 cursor-pointer text-white">
+                <Plus className="h-4 w-4" /> Nuevo Asset
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
       {/* Project Info Header */}
-      <ProjectHeader project={project} />
+      <ProjectHeader project={project} userRole={userRole} />
 
       {/* Metrics Banner */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -136,11 +140,13 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             <Card className="border-dashed border-slate-300 p-12 text-center bg-white">
               <CardContent className="space-y-3">
                 <p className="text-slate-500 text-sm">Este proyecto no tiene assets todavía.</p>
-                <Link href={`/projects/${project.id}/assets/new`}>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer">
-                    Crear primer Asset del Proyecto
-                  </Button>
-                </Link>
+                {(userRole === 'PRODUCER' || userRole === 'ART') && (
+                  <Link href={`/projects/${project.id}/assets/new`}>
+                    <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer">
+                      Crear primer Asset del Proyecto
+                    </Button>
+                  </Link>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -203,8 +209,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
         {/* Right Sidebar: Sets & Team Management */}
         <div className="space-y-6">
-          <ProjectSets projectId={project.id} sets={project.sets} />
-          <ProjectTeam projectId={project.id} members={project.members} />
+          <ProjectSets projectId={project.id} sets={project.sets} userRole={userRole} />
+          <ProjectTeam projectId={project.id} members={project.members} userRole={userRole} />
         </div>
       </div>
     </div>

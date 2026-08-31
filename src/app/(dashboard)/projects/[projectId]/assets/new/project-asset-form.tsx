@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createAsset } from '@/lib/actions/asset-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AutoCompleteInput } from '@/components/ui/autocomplete-input';
 import { Label } from '@/components/ui/label';
 import { ImageUploader } from '@/components/assets/image-uploader';
 import { Loader2, Sparkles } from 'lucide-react';
@@ -123,12 +124,20 @@ export function ProjectAssetForm({ projectId }: ProjectAssetFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="title">Título / Nombre del Asset *</Label>
-        <Input
+        <AutoCompleteInput
           id="title"
           placeholder="Ej: Laptop ThinkPad X1 Carbon"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
+          onChange={setTitle}
+          fetchSuggestions={async (query) => {
+            const res = await fetch('/api/ai/autocomplete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt: query }),
+            });
+            const data = await res.json();
+            return data.suggestions || [];
+          }}
         />
       </div>
 

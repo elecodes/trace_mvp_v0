@@ -1,30 +1,17 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-
-async function getAuthUserId() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error('No estás autenticado');
-  }
-  return user.id;
-}
+import {
+  requireAssetProjectMember,
+  canManageShooting
+} from '@/lib/permissions';
 
 export async function upsertShootingRecord(assetId: string, data: { usedInShooting: boolean; visibleOnCamera: boolean; notes?: string | null }) {
-  const userId = await getAuthUserId();
-  const asset = await prisma.asset.findUnique({
-    where: { id: assetId },
-    include: { project: true }
-  });
+  const { role } = await requireAssetProjectMember(assetId);
 
-  if (!asset || asset.project.userId !== userId) {
-    throw new Error('Asset no encontrado o no autorizado');
+  if (!canManageShooting(role)) {
+    throw new Error('No autorizado para modificar registros de rodaje');
   }
 
   const record = await prisma.shootingRecord.upsert({

@@ -1,30 +1,19 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { ProjectRole } from '@prisma/client';
-
-async function getAuthUserId() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error('No estás autenticado');
-  }
-  return user.id;
-}
+import {
+  getAuthUserId,
+  requireProjectMember,
+  canManageTeam
+} from '@/lib/permissions';
 
 export async function addProjectMember(projectId: string, email: string, role: ProjectRole) {
-  const ownerId = await getAuthUserId();
-  const project = await prisma.project.findUnique({
-    where: { id: projectId }
-  });
-
-  if (!project || project.userId !== ownerId) {
-    throw new Error('Proyecto no encontrado o no autorizado');
+  const { role: userRole } = await requireProjectMember(projectId);
+  
+  if (!canManageTeam(userRole)) {
+    throw new Error('No autorizado para gestionar el equipo');
   }
 
   let targetUser = await prisma.user.findUnique({
@@ -64,13 +53,10 @@ export async function addProjectMember(projectId: string, email: string, role: P
 }
 
 export async function removeProjectMember(projectId: string, memberId: string) {
-  const ownerId = await getAuthUserId();
-  const project = await prisma.project.findUnique({
-    where: { id: projectId }
-  });
+  const { role: userRole } = await requireProjectMember(projectId);
 
-  if (!project || project.userId !== ownerId) {
-    throw new Error('Proyecto no encontrado o no autorizado');
+  if (!canManageTeam(userRole)) {
+    throw new Error('No autorizado para gestionar el equipo');
   }
 
   await prisma.projectMember.delete({
@@ -82,10 +68,38 @@ export async function removeProjectMember(projectId: string, memberId: string) {
 }
 
 export async function getProjectMembers(projectId: string) {
-  return prisma.projectMember.findMany({
+  await requireProjectMember(projectId);
+  
+  const members = await prisma.projectMember.findMany({
     where: { projectId },
     include: {
       user: true
     }
   });
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { userId: true, createdAt: true, updatedAt: true }
+  });
+
+  if (!project) return members;
+
+  const owner = await prisma.user.findUnique({
+    where: { id: project.userId }
+  });
+
+  const memberList = [...members];
+  if (owner && !members.some(m => m.userId === owner.id)) {
+    memberList.unshift({
+      id: `owner-${owner.id}`,
+      projectId,
+      userId: owner.id,
+      role: 'PRODUCER' as ProjectRole,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      user: owner
+    });
+  }
+
+  return memberList;
 }

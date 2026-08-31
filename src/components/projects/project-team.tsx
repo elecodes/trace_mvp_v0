@@ -23,6 +23,7 @@ interface TeamMember {
 interface ProjectTeamProps {
   projectId: string;
   members: TeamMember[];
+  userRole?: ProjectRole;
 }
 
 const ROLE_LABELS: Record<ProjectRole, string> = {
@@ -43,7 +44,7 @@ const ROLE_COLORS: Record<ProjectRole, string> = {
   LEGAL: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
-export function ProjectTeam({ projectId, members }: ProjectTeamProps) {
+export function ProjectTeam({ projectId, members, userRole }: ProjectTeamProps) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<ProjectRole>('ART');
   const [loading, setLoading] = useState(false);
@@ -111,12 +112,14 @@ export function ProjectTeam({ projectId, members }: ProjectTeamProps) {
                     {ROLE_ICONS[member.role]}
                     {ROLE_LABELS[member.role]}
                   </span>
-                  <button
-                    onClick={() => handleRemoveMember(member.id)}
-                    className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {userRole === 'PRODUCER' && !member.id.startsWith('owner-') && (
+                    <button
+                      onClick={() => handleRemoveMember(member.id)}
+                      className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))
@@ -124,46 +127,48 @@ export function ProjectTeam({ projectId, members }: ProjectTeamProps) {
         </div>
 
         {/* Add Member Form */}
-        <form onSubmit={handleAddMember} className="border-t pt-4 space-y-3">
-          <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <UserPlus className="h-3.5 w-3.5 text-slate-500" /> Agregar Colaborador
-          </h4>
-          {error && <p className="text-[10px] text-red-500">{error}</p>}
-          <div className="space-y-2">
-            <div>
-              <Label htmlFor="member-email" className="text-[10px] font-semibold text-slate-500">Email de Usuario *</Label>
-              <Input
-                id="member-email"
-                type="email"
-                placeholder="ejemplo@trace.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="h-8 text-xs mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="member-role" className="text-[10px] font-semibold text-slate-500">Rol del Miembro</Label>
-              <select
-                id="member-role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as ProjectRole)}
-                className="w-full h-8 rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus-visible:outline-none mt-1"
+        {userRole === 'PRODUCER' && (
+          <form onSubmit={handleAddMember} className="border-t pt-4 space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <UserPlus className="h-3.5 w-3.5 text-slate-500" /> Agregar Colaborador
+            </h4>
+            {error && <p className="text-[10px] text-red-500">{error}</p>}
+            <div className="space-y-2">
+              <div>
+                <Label htmlFor="member-email" className="text-[10px] font-semibold text-slate-500">Email de Usuario *</Label>
+                <Input
+                  id="member-email"
+                  type="email"
+                  placeholder="ejemplo@trace.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-8 text-xs mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="member-role" className="text-[10px] font-semibold text-slate-500">Rol del Miembro</Label>
+                <select
+                  id="member-role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as ProjectRole)}
+                  className="w-full h-8 rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus-visible:outline-none mt-1"
+                >
+                  <option value="PRODUCER">Productor</option>
+                  <option value="ART">Arte / Decorador</option>
+                  <option value="LEGAL">Legal / Derechos</option>
+                </select>
+              </div>
+              <Button
+                type="submit"
+                disabled={loading || !email}
+                className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer font-semibold"
               >
-                <option value="PRODUCER">Productor</option>
-                <option value="ART">Arte / Decorador</option>
-                <option value="LEGAL">Legal / Derechos</option>
-              </select>
+                {loading ? 'Agregando...' : 'Invitar al Equipo'}
+              </Button>
             </div>
-            <Button
-              type="submit"
-              disabled={loading || !email}
-              className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer font-semibold"
-            >
-              {loading ? 'Agregando...' : 'Invitar al Equipo'}
-            </Button>
-          </div>
-        </form>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

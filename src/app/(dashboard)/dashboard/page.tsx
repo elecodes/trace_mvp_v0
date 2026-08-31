@@ -5,7 +5,7 @@ import { getDashboardMetrics, getAssets } from '@/lib/actions/asset-actions';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FolderKanban, Plus, ArrowRight, Box } from 'lucide-react';
+import { FolderKanban, Plus, ArrowRight, Box, Calendar } from 'lucide-react';
 import { MetricsCards } from '@/components/dashboard/metrics-cards';
 import { StatusChart } from '@/components/dashboard/status-chart';
 import { SustainabilityChart } from '@/components/dashboard/sustainability-chart';
@@ -82,10 +82,16 @@ export default async function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                    <Box className="h-3.5 w-3.5 text-slate-400" />
-                    {project._count.assets} {project._count.assets === 1 ? 'asset' : 'assets'}
-                  </span>
+                  <div className="flex gap-2">
+                    <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-full flex items-center gap-1">
+                      <Box className="h-3 w-3 text-slate-400" />
+                      {project._count.assets} assets
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-full flex items-center gap-1">
+                      <Calendar className="h-3 w-3 text-slate-400" />
+                      {new Date(project.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
                   <Link href={`/projects/${project.id}`}>
                     <Button variant="ghost" size="sm" className="gap-1 text-xs text-emerald-600 font-semibold cursor-pointer">
                       Abrir <ArrowRight className="h-3.5 w-3.5" />
