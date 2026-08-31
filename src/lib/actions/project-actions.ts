@@ -182,6 +182,7 @@ export async function getProjectPdfData(projectId: string) {
           },
           rightsRecord: true,
           sustainabilityRecord: true,
+          set: true,
         },
         orderBy: { createdAt: 'desc' },
       },
